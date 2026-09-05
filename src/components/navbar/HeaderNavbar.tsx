@@ -18,6 +18,7 @@ import { cn } from '../../lib/utils';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { LanguageToggle } from '../common/LanguageToggle';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface HeaderNavbarProps {
   currentUser: UserProfile;
@@ -27,6 +28,7 @@ interface HeaderNavbarProps {
   isMuted?: boolean;
   onToggleMute?: () => void;
   onGoToLanding?: () => void;
+  onNavigateToConversation?: (conversationId: string) => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -35,6 +37,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   teachers,
   onRefresh,
   onGoToLanding,
+  onNavigateToConversation,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -169,6 +172,12 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
             {/* Language Toggle */}
             <LanguageToggle />
+
+            {/* Notification Center */}
+            <NotificationDropdown
+              userId={currentUser.id}
+              onNavigateToConversation={onNavigateToConversation}
+            />
 
             {/* Sign Out / Exit to Login Interface Button */}
             <button

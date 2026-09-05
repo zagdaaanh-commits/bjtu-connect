@@ -116,6 +116,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
 
+    // Auto-grow textarea smoothly without scrollbar flash
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+
     // Broadcast typing event
     broadcastEvent({
       type: 'TYPING_STATUS',
@@ -303,7 +309,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           }
           disabled={disabled}
           rows={1}
-          className="flex-1 bg-transparent border-none outline-none resize-none text-sm text-slate-800 placeholder-slate-400 max-h-32 py-1.5 leading-relaxed"
+          className="flex-1 bg-transparent border-none outline-none resize-none no-scrollbar overflow-y-auto text-sm text-slate-800 placeholder-slate-400 max-h-28 py-1.5 leading-relaxed"
         />
 
         {/* Send Button */}

@@ -19,7 +19,8 @@ import { StudentWorkspace } from '../components/student/StudentWorkspace';
 import { TeacherWorkspace } from '../components/teacher/TeacherWorkspace';
 import { StudentProfile, TeacherProfile } from '../types/portal';
 import { useLanguage } from '../context/LanguageContext';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, X } from 'lucide-react';
+import { Avatar } from '../components/common/Avatar';
 
 export default function HomePage() {
   const { language, t } = useLanguage();
@@ -32,11 +33,25 @@ export default function HomePage() {
   // Step 2: Portal Home (activeView === 'landing')
   // Step 3: Workspace (activeView === 'workspace')
   const [activeView, setActiveView] = useState<'login' | 'landing' | 'workspace'>('login');
+  const [toastNotif, setToastNotif] = useState<{
+    id: string;
+    title: string;
+    content: string;
+    senderAvatar?: string;
+    linkConversationId?: string;
+  } | null>(null);
 
   const refreshState = useCallback(() => {
     const currentState = getStoredState();
     setState(currentState);
   }, []);
+
+  // Auto-dismiss floating toast notification after 6 seconds
+  useEffect(() => {
+    if (!toastNotif) return;
+    const timer = setTimeout(() => setToastNotif(null), 6000);
+    return () => clearTimeout(timer);
+  }, [toastNotif]);
 
   useEffect(() => {
     setMounted(true);
@@ -81,12 +96,45 @@ export default function HomePage() {
           if (!isMuted) {
             playNotificationChime();
           }
+          const msg = event.payload;
+          setToastNotif({
+            id: msg.id || String(Date.now()),
+            title: msg.senderName || 'BJTU Connect',
+            content: msg.content || '',
+            senderAvatar: msg.senderAvatar,
+            linkConversationId: msg.conversationId,
+          });
+
+          // Push browser native notification if permitted
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification(msg.senderName || 'BJTU Connect', {
+                body: msg.content,
+                icon: msg.senderAvatar || '/favicon.ico',
+              });
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (event.type === 'BOOKING_STATUS_CHANGED') {
+        const stored = getStoredState();
+        if (stored.currentUser) {
+          if (!isMuted) {
+            playNotificationChime();
+          }
+          setToastNotif({
+            id: String(Date.now()),
+            title: language === 'zh' ? '学业答疑预约状态更新' : 'Consultation Booking Updated',
+            content: language === 'zh' ? '您的答疑预约有了新的处理结果，请前往咨询查看。' : 'Your consultation proposal was updated.',
+            linkConversationId: event.payload?.conversationId,
+          });
         }
       }
     });
 
     return () => unsubscribe();
-  }, [isMuted, refreshState]);
+  }, [isMuted, refreshState, language]);
 
   if (!mounted || !state) {
     return (
@@ -148,6 +196,58 @@ export default function HomePage() {
     setActiveView('login');
   };
 
+  const renderToastBanner = () => {
+    if (!toastNotif) return null;
+    return (
+      <div className="fixed top-20 right-4 sm:right-6 z-50 max-w-sm w-full bg-white/95 backdrop-blur-xl border border-academic-300 rounded-2xl shadow-2xl p-4 transition-all animate-in fade-in slide-in-from-top-4 duration-300 flex items-start gap-3 ring-1 ring-academic-600/20">
+        {toastNotif.senderAvatar ? (
+          <Avatar src={toastNotif.senderAvatar} name={toastNotif.title} size="md" />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-academic-100 text-academic-700 flex items-center justify-center shrink-0 font-bold text-sm">
+            🔔
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <span className="font-bold text-xs text-slate-900 truncate">{toastNotif.title}</span>
+            <span className="text-[10px] text-academic-700 font-semibold uppercase tracking-wider bg-academic-50 px-1.5 py-0.2 rounded border border-academic-200">
+              {language === 'zh' ? '新通知' : 'Alert'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-600 line-clamp-2 mt-1 leading-relaxed break-words">
+            {toastNotif.content}
+          </p>
+          <div className="flex items-center gap-2 mt-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                handleGoToWorkspace();
+                setToastNotif(null);
+              }}
+              className="text-[11px] font-bold text-white bg-academic-700 hover:bg-academic-800 px-3 py-1 rounded-lg transition-colors cursor-pointer shadow-xs"
+            >
+              {language === 'zh' ? '查看咨询' : 'View Chat'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setToastNotif(null)}
+              className="text-[11px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+            >
+              {language === 'zh' ? '忽略' : 'Dismiss'}
+            </button>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setToastNotif(null)}
+          className="text-slate-400 hover:text-slate-600 p-1 -mr-1 -mt-1 cursor-pointer"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  };
+
   // STEP 1: If not logged in or active view is login, render Login Page (CAS Unified Auth)
   if (activeView === 'login' || !currentUser) {
     return (
@@ -162,6 +262,7 @@ export default function HomePage() {
   if (activeView === 'workspace') {
     return (
       <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900">
+        {renderToastBanner()}
         {/* Top Navigation */}
         <HeaderNavbar
           currentUser={currentUser}
@@ -171,6 +272,7 @@ export default function HomePage() {
           isMuted={isMuted}
           onToggleMute={() => setIsMuted(!isMuted)}
           onGoToLanding={handleGoToLanding}
+          onNavigateToConversation={() => handleGoToWorkspace()}
         />
 
         {/* Main Content Area */}
@@ -238,11 +340,14 @@ export default function HomePage() {
 
   // STEP 2: Render the Portal Home (Editorial Landing Page)
   return (
-    <EditorialLandingPage
-      currentUser={currentUser}
-      onOpenAuth={() => setActiveView('login')}
-      onGoToWorkspace={handleGoToWorkspace}
-      onLogout={handleLogout}
-    />
+    <>
+      {renderToastBanner()}
+      <EditorialLandingPage
+        currentUser={currentUser}
+        onOpenAuth={() => setActiveView('login')}
+        onGoToWorkspace={handleGoToWorkspace}
+        onLogout={handleLogout}
+      />
+    </>
   );
 }

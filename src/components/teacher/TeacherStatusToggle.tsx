@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import { TeacherProfile, TeacherStatus } from '../../types/portal';
-import { updateTeacherStatus } from '../../lib/storage';
+import { updateTeacherStatus, updateTeacherOfficeHours } from '../../lib/storage';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../lib/utils';
-import { Check, Edit2, Clock, Sparkles } from 'lucide-react';
+import { Check, Edit2, Clock, Sparkles, MapPin, Calendar } from 'lucide-react';
+import { Modal } from '../common/Modal';
 
 interface TeacherStatusToggleProps {
   teacher: TeacherProfile;
@@ -19,6 +20,28 @@ export const TeacherStatusToggle: React.FC<TeacherStatusToggleProps> = ({
   const { language, formatOfficeHours } = useLanguage();
   const [isEditingNotice, setIsEditingNotice] = useState(false);
   const [noticeText, setNoticeText] = useState(teacher.customStatusMessage || '');
+  const [isEditingHours, setIsEditingHours] = useState(false);
+  const [hoursText, setHoursText] = useState(teacher.officeHours || '');
+  const [locationText, setLocationText] = useState(teacher.officeLocation || '');
+
+  const officeHourPresets = [
+    {
+      label: language === 'zh' ? '周二与周四 14:00 - 17:00' : 'Tue & Thu 14:00 - 17:00',
+      value: 'Tue & Thu 14:00 - 17:00',
+    },
+    {
+      label: language === 'zh' ? '周一与周三 09:30 - 11:30' : 'Mon & Wed 09:30 - 11:30',
+      value: 'Mon & Wed 09:30 - 11:30',
+    },
+    {
+      label: language === 'zh' ? '周三与周五 15:00 - 17:30' : 'Wed & Fri 15:00 - 17:30',
+      value: 'Wed & Fri 15:00 - 17:30',
+    },
+    {
+      label: language === 'zh' ? '工作日每天 16:00 - 17:30' : 'Mon - Fri 16:00 - 17:30',
+      value: 'Mon - Fri 16:00 - 17:30',
+    },
+  ];
 
   const statusOptions: {
     status: TeacherStatus;
@@ -68,6 +91,13 @@ export const TeacherStatusToggle: React.FC<TeacherStatusToggleProps> = ({
     onRefresh();
   };
 
+  const handleSaveHours = () => {
+    if (!hoursText.trim()) return;
+    updateTeacherOfficeHours(teacher.id, hoursText.trim(), locationText.trim() || undefined);
+    setIsEditingHours(false);
+    onRefresh();
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
       {/* Top row: Status pills */}
@@ -111,9 +141,23 @@ export const TeacherStatusToggle: React.FC<TeacherStatusToggleProps> = ({
           <span className="text-slate-500 shrink-0">
             {language === 'zh' ? '官方答疑时间:' : 'Official Hours:'}
           </span>
-          <span className="font-semibold text-slate-700 shrink-0">
-            {formatOfficeHours(teacher.officeHours)}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="font-semibold text-slate-700">
+              {formatOfficeHours(teacher.officeHours)}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setHoursText(teacher.officeHours || '');
+                setLocationText(teacher.officeLocation || '');
+                setIsEditingHours(true);
+              }}
+              title={language === 'zh' ? '修改官方答疑时间与地点' : 'Edit Official Office Hours & Location'}
+              className="p-1 text-slate-400 hover:text-academic-700 hover:bg-slate-100 rounded transition-colors"
+            >
+              <Edit2 className="w-3 h-3" />
+            </button>
+          </div>
           <span className="text-slate-300 hidden sm:inline">|</span>
 
           {isEditingNotice ? (
@@ -162,6 +206,103 @@ export const TeacherStatusToggle: React.FC<TeacherStatusToggleProps> = ({
           {language === 'zh' ? '实时同步至全校学生端' : 'Syncs immediately to all students'}
         </div>
       </div>
+
+      {/* Edit Office Hours Modal */}
+      <Modal
+        isOpen={isEditingHours}
+        onClose={() => setIsEditingHours(false)}
+        maxWidth="md"
+        title={language === 'zh' ? '修改教师官方答疑时间' : 'Edit Faculty Office Hours'}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500">
+            {language === 'zh'
+              ? '设定的答疑时间将同步显示于学生端学院名录、课程主页与咨询聊天窗口。'
+              : 'Configured office hours are synchronized across student directory, course views, and consultation chat.'}
+          </p>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+              {language === 'zh' ? '常用时间预设' : 'Quick Presets'}
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {officeHourPresets.map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => setHoursText(preset.value)}
+                  className={cn(
+                    'p-2 text-xs rounded-xl border text-left transition-all cursor-pointer',
+                    hoursText === preset.value
+                      ? 'border-academic-600 bg-academic-50/70 text-academic-900 font-semibold shadow-2xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
+                  )}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {language === 'zh' ? '答疑时间说明' : 'Office Hours Schedule'}
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={hoursText}
+                onChange={(e) => setHoursText(e.target.value)}
+                placeholder={
+                  language === 'zh'
+                    ? '例如: 周二与周四 14:00 - 17:00'
+                    : 'e.g. Tue & Thu 14:00 - 17:00'
+                }
+                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-academic-600/30 focus:border-academic-700"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {language === 'zh' ? '答疑办公室地点' : 'Office Room / Location'}
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={locationText}
+                onChange={(e) => setLocationText(e.target.value)}
+                placeholder={
+                  language === 'zh'
+                    ? '例如: 思源东楼 402B (或腾讯会议 / 钉钉会议)'
+                    : 'e.g. Siyuan East Building Room 402B'
+                }
+                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-academic-600/30 focus:border-academic-700"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setIsEditingHours(false)}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              {language === 'zh' ? '取消' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveHours}
+              disabled={!hoursText.trim()}
+              className="px-4 py-2 text-xs font-semibold bg-academic-700 hover:bg-academic-800 text-white rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {language === 'zh' ? '保存答疑时间' : 'Save Office Hours'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

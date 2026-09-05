@@ -150,7 +150,21 @@ export interface Conversation {
   unreadCountStudent: number;
   unreadCountTeacher: number;
   starredByTeacher?: boolean;
+  starredByStudent?: boolean;
   topicTag?: InquiryTag;
   teacherNotes?: string;
   updatedAt: number;
+}
+
+export interface PortalNotification {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  type: 'message' | 'booking' | 'office_hours' | 'system';
+  timestamp: number;
+  read: boolean;
+  linkConversationId?: string;
+  senderName?: string;
+  senderAvatar?: string;
 }

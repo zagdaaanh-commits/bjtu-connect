@@ -14,7 +14,8 @@ import { ChatPane } from '../chat/ChatPane';
 import { Avatar } from '../common/Avatar';
 import { StatusIndicator } from '../common/StatusIndicator';
 import { Badge } from '../common/Badge';
-import { createOrGetConversation, markConversationRead } from '../../lib/storage';
+import { createOrGetConversation, markConversationRead, toggleStarConversation } from '../../lib/storage';
+import { subscribeToPortalEvents } from '../../lib/realtime';
 import { formatTimestamp, cn } from '../../lib/utils';
 import { useLanguage } from '../../context/LanguageContext';
 import {
@@ -24,6 +25,9 @@ import {
   Sparkles,
   Inbox,
   Search,
+  Star,
+  Check,
+  CheckCheck,
 } from 'lucide-react';
 
 interface StudentWorkspaceProps {
@@ -47,6 +51,24 @@ export const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({
   const [activeTab, setActiveTab] = useState<'directory' | 'courses' | 'chats'>('directory');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [chatSearch, setChatSearch] = useState('');
+  const [filterMode, setFilterMode] = useState<'all' | 'unread' | 'starred'>('all');
+
+  // Realtime subscription to refresh on read status or message events
+  React.useEffect(() => {
+    const unsubscribe = subscribeToPortalEvents((ev) => {
+      if (
+        ev.type === 'CONVERSATION_READ' ||
+        ev.type === 'NEW_MESSAGE' ||
+        ev.type === 'MESSAGE_DELETED' ||
+        ev.type === 'BOOKING_STATUS_CHANGED' ||
+        ev.type === 'TEACHER_STATUS_UPDATED' ||
+        ev.type === 'OFFICE_HOURS_UPDATED'
+      ) {
+        onRefresh();
+      }
+    });
+    return () => unsubscribe();
+  }, [onRefresh]);
 
   // Student's relevant conversations
   const studentConversations = conversations
@@ -82,11 +104,16 @@ export const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({
 
   const filteredConversations = studentConversations.filter((c) => {
     const teacher = teachers.find((t) => t.id === c.teacherId);
-    if (!chatSearch) return true;
+    // Tab filter
+    if (filterMode === 'unread' && c.unreadCountStudent === 0) return false;
+    if (filterMode === 'starred' && !c.starredByStudent) return false;
+
+    if (!chatSearch.trim()) return true;
     const q = chatSearch.toLowerCase();
     return (
       teacher?.fullName.toLowerCase().includes(q) ||
       (teacher?.chineseName && teacher.chineseName.includes(q)) ||
+      (teacher?.faculty && teacher.faculty.toLowerCase().includes(q)) ||
       c.lastMessage?.content.toLowerCase().includes(q)
     );
   });
@@ -184,15 +211,88 @@ export const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({
               selectedConversationId ? 'hidden md:flex' : 'flex'
             )}
           >
-            {/* Search Box */}
-            <div className="p-3.5 border-b border-slate-200 bg-white">
+            {/* Inbox Header matching UnifiedInbox */}
+            <div className="p-3.5 border-b border-slate-200 bg-white space-y-3 shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-800">
+                    {language === 'zh' ? '教师咨询' : 'Faculty Inquiries'}
+                  </h2>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
+                    {studentConversations.length}
+                  </span>
+                </div>
+
+                {totalUnread > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-academic-700 text-white text-[10px] font-bold animate-pulse">
+                    {totalUnread} {language === 'zh' ? '未读' : 'Unread'}
+                  </span>
+                )}
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('all')}
+                  className={cn(
+                    'flex-1 py-1 rounded-lg text-center transition-all cursor-pointer',
+                    filterMode === 'all'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  {language === 'zh' ? '全部' : 'All'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('unread')}
+                  className={cn(
+                    'flex-1 py-1 rounded-lg text-center transition-all flex items-center justify-center gap-1 cursor-pointer',
+                    filterMode === 'unread'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  <span>{language === 'zh' ? '未读' : 'Unread'}</span>
+                  {totalUnread > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-academic-700" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('starred')}
+                  className={cn(
+                    'flex-1 py-1 rounded-lg text-center transition-all flex items-center justify-center gap-1 cursor-pointer',
+                    filterMode === 'starred'
+                      ? 'bg-white text-amber-800 font-semibold shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  <Star
+                    className={cn(
+                      'w-3 h-3',
+                      filterMode === 'starred'
+                        ? 'fill-amber-400 text-amber-500'
+                        : 'text-slate-400'
+                    )}
+                  />
+                  <span>{language === 'zh' ? '重要' : 'Priority'}</span>
+                </button>
+              </div>
+
+              {/* Search Box */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
                   value={chatSearch}
                   onChange={(e) => setChatSearch(e.target.value)}
-                  placeholder={t('chat.search')}
+                  placeholder={
+                    language === 'zh'
+                      ? '搜索教师、院系或消息...'
+                      : 'Search faculty, school, or message...'
+                  }
                   className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:bg-white focus:border-academic-700"
                 />
               </div>
@@ -209,7 +309,7 @@ export const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({
                     key={conv.id}
                     onClick={() => handleSelectConversation(conv.id)}
                     className={cn(
-                      'p-3.5 flex items-start gap-3 cursor-pointer transition-colors text-left relative',
+                      'p-3.5 flex items-start gap-3 cursor-pointer transition-colors text-left relative group',
                       isSelected
                         ? 'bg-white border-l-4 border-l-academic-700 shadow-xs'
                         : 'hover:bg-slate-100/70'
@@ -227,11 +327,32 @@ export const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({
                         <div className="font-semibold text-slate-900 text-xs sm:text-sm truncate">
                           {teacher ? formatTeacher(teacher) : 'Faculty'}
                         </div>
-                        {conv.lastMessage && (
-                          <span className="text-[10px] text-slate-400 shrink-0">
-                            {formatTimestamp(conv.lastMessage.timestamp)}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleStarConversation(conv.id, 'student');
+                              onRefresh();
+                            }}
+                            title={language === 'zh' ? '标为重要咨询' : 'Mark as priority'}
+                            className="p-0.5 text-slate-300 hover:text-amber-500 transition-colors"
+                          >
+                            <Star
+                              className={cn(
+                                'w-3 h-3',
+                                conv.starredByStudent
+                                  ? 'fill-amber-400 text-amber-500'
+                                  : 'text-slate-300 group-hover:text-slate-400'
+                              )}
+                            />
+                          </button>
+                          {conv.lastMessage && (
+                            <span className="text-[10px] text-slate-400">
+                              {formatTimestamp(conv.lastMessage.timestamp)}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="text-[11px] text-slate-500 truncate mb-1">
@@ -239,26 +360,56 @@ export const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({
                       </div>
 
                       {conv.lastMessage && (
-                        <p className="text-xs text-slate-600 truncate">
+                        <p className="text-xs text-slate-600 truncate flex items-center gap-1">
                           {conv.lastMessage.senderId === student.id && (
-                            <span className="text-slate-400 font-normal">
+                            <span className="text-slate-400 font-normal shrink-0">
                               {language === 'zh' ? '我: ' : 'You: '}
                             </span>
                           )}
-                          {conv.lastMessage.content}
+                          <span className="truncate">{conv.lastMessage.content}</span>
                         </p>
                       )}
 
-                      {/* Topic Tag & Unread Badge */}
-                      <div className="flex items-center justify-between mt-1.5">
-                        {conv.topicTag && (
-                          <Badge tag={conv.topicTag} className="text-[10px] py-0 px-1.5" />
-                        )}
-                        {conv.unreadCountStudent > 0 && (
-                          <span className="ml-auto px-1.5 py-0.2 rounded-full bg-academic-700 text-white text-[10px] font-bold">
-                            {conv.unreadCountStudent}
-                          </span>
-                        )}
+                      {/* Topic Tag & Read/Unread Indicators */}
+                      <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-100/60 text-[11px]">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {conv.topicTag && (
+                            <Badge tag={conv.topicTag} className="text-[10px] py-0 px-1.5" />
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* Student message read receipt */}
+                          {conv.lastMessage?.senderId === student.id && (
+                            <span
+                              className={cn(
+                                'text-[10px] inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded font-medium',
+                                conv.lastMessage.status === 'read'
+                                  ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                                  : 'text-slate-500 bg-slate-100'
+                              )}
+                            >
+                              {conv.lastMessage.status === 'read' ? (
+                                <>
+                                  <CheckCheck className="w-3 h-3 text-emerald-600" />
+                                  <span>{language === 'zh' ? '已读' : 'Read'}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-3 h-3 text-slate-400" />
+                                  <span>{language === 'zh' ? '未读' : 'Delivered'}</span>
+                                </>
+                              )}
+                            </span>
+                          )}
+
+                          {/* Incoming unread message count */}
+                          {conv.unreadCountStudent > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-academic-700 text-white text-[10px] font-bold shadow-2xs animate-pulse">
+                              {conv.unreadCountStudent} {language === 'zh' ? '条新消息' : 'new'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

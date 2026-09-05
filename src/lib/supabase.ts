@@ -436,3 +436,27 @@ export async function upsertSupabaseUser(user: UserProfile): Promise<void> {
     console.warn('Supabase upsertUser failed:', err);
   }
 }
+
+export async function deleteSupabaseMessage(messageId: string): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    await supabase.from('messages').delete().eq('id', messageId);
+  } catch (err) {
+    console.warn('Supabase deleteMessage failed:', err);
+  }
+}
+
+export async function updateSupabaseTeacherOfficeHours(
+  teacherId: string,
+  officeHours: string,
+  officeLocation?: string
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const payload: any = { office_hours: officeHours };
+    if (officeLocation) payload.office_location = officeLocation;
+    await supabase.from('teachers').update(payload).eq('id', teacherId);
+  } catch (err) {
+    console.warn('Supabase updateTeacherOfficeHours failed:', err);
+  }
+}

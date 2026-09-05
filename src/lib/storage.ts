@@ -8,6 +8,7 @@ import {
   TeacherStatus,
   InquiryTag,
   Attachment,
+  PortalNotification,
 } from '../types/portal';
 import {
   INITIAL_TEACHERS,
@@ -27,6 +28,8 @@ import {
   updateSupabaseBookingStatus,
   markSupabaseConversationRead,
   upsertSupabaseUser,
+  deleteSupabaseMessage,
+  updateSupabaseTeacherOfficeHours,
 } from './supabase';
 
 const STORAGE_KEYS = {
@@ -36,6 +39,7 @@ const STORAGE_KEYS = {
   CONVERSATIONS: 'bjtu_portal_conversations_v3',
   MESSAGES: 'bjtu_portal_messages_v3',
   CURRENT_USER: 'bjtu_portal_current_user_v3',
+  NOTIFICATIONS: 'bjtu_portal_notifications_v3',
 };
 
 export interface PortalState {
@@ -253,6 +257,7 @@ export function resetPortalStorage(): void {
   localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(COURSES));
   localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(INITIAL_CONVERSATIONS));
   localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(INITIAL_MESSAGES));
+  localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   broadcastEvent({ type: 'DATA_RESET' });
 }
@@ -448,6 +453,35 @@ export function updateTeacherStatus(teacherId: string, status: TeacherStatus, cu
   }
 }
 
+export function updateTeacherOfficeHours(teacherId: string, officeHours: string, officeLocation?: string): void {
+  const state = getStoredState();
+  const updatedTeachers = state.teachers.map((t) => {
+    if (t.id === teacherId) {
+      return {
+        ...t,
+        officeHours,
+        officeLocation: officeLocation !== undefined ? officeLocation : t.officeLocation,
+      };
+    }
+    return t;
+  });
+
+  if (state.currentUser && state.currentUser.id === teacherId) {
+    const updatedCurrentUser = {
+      ...state.currentUser,
+      officeHours,
+      officeLocation: officeLocation !== undefined ? officeLocation : (state.currentUser as TeacherProfile).officeLocation,
+    } as TeacherProfile;
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedCurrentUser));
+  }
+
+  localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(updatedTeachers));
+  broadcastEvent({ type: 'OFFICE_HOURS_UPDATED', payload: { teacherId, officeHours, officeLocation } });
+  if (isSupabaseConfigured()) {
+    updateSupabaseTeacherOfficeHours(teacherId, officeHours, officeLocation);
+  }
+}
+
 export function updateTeacherNotes(conversationId: string, notes: string): void {
   const state = getStoredState();
   const updated = state.conversations.map((c) => {
@@ -586,6 +620,21 @@ export function sendPortalMessage(params: {
   localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updatedConversations));
   broadcastEvent({ type: 'NEW_MESSAGE', payload: newMsg });
 
+  // Generate notification for recipient
+  const conv = state.conversations.find((c) => c.id === params.conversationId);
+  const recipientId = params.senderRole === 'student' ? conv?.teacherId : conv?.studentId;
+  if (recipientId) {
+    addPortalNotification({
+      userId: recipientId,
+      title: params.senderName,
+      content: params.content,
+      type: 'message',
+      linkConversationId: params.conversationId,
+      senderName: params.senderName,
+      senderAvatar: params.senderAvatar,
+    });
+  }
+
   if (isSupabaseConfigured()) {
     insertSupabaseMessage(newMsg);
     const convToUpdate = updatedConversations.find((c) => c.id === params.conversationId);
@@ -595,6 +644,158 @@ export function sendPortalMessage(params: {
   }
 
   return newMsg;
+}
+
+export function deletePortalMessage(
+  conversationId: string,
+  messageId: string,
+  userId: string
+): boolean {
+  const state = getStoredState();
+  const msg = state.messages.find((m) => m.id === messageId);
+  if (!msg) return false;
+
+  const isSender = msg.senderId === userId;
+  const isAdmin =
+    state.currentUser?.role === 'admin' ||
+    (state.currentUser as any)?.isAdmin === true ||
+    (state.currentUser as any)?.is_admin === true ||
+    (typeof window !== 'undefined' && localStorage.getItem('bjtu_admin_session') === 'true');
+
+  if (!isSender && !isAdmin) return false;
+
+  const updatedMessages = state.messages.filter((m) => m.id !== messageId);
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages));
+
+  // Recalculate lastMessage for this conversation
+  const convMessages = updatedMessages
+    .filter((m) => m.conversationId === conversationId)
+    .sort((a, b) => a.timestamp - b.timestamp);
+  const newLastMsg = convMessages.length > 0 ? convMessages[convMessages.length - 1] : undefined;
+
+  const updatedConversations = state.conversations.map((c) => {
+    if (c.id === conversationId) {
+      return {
+        ...c,
+        lastMessage: newLastMsg
+          ? {
+              content: newLastMsg.content,
+              timestamp: newLastMsg.timestamp,
+              senderId: newLastMsg.senderId,
+              status: newLastMsg.status,
+              tag: newLastMsg.tag,
+            }
+          : undefined,
+        updatedAt: newLastMsg ? newLastMsg.timestamp : c.updatedAt,
+      };
+    }
+    return c;
+  });
+
+  localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updatedConversations));
+  broadcastEvent({ type: 'MESSAGE_DELETED', payload: { conversationId, messageId } });
+
+  if (isSupabaseConfigured()) {
+    deleteSupabaseMessage(messageId);
+  }
+
+  return true;
+}
+
+export function toggleStarConversation(conversationId: string, role: 'student' | 'teacher'): boolean {
+  const state = getStoredState();
+  let nextVal = false;
+  const updated = state.conversations.map((c) => {
+    if (c.id === conversationId) {
+      if (role === 'teacher') {
+        nextVal = !c.starredByTeacher;
+        return { ...c, starredByTeacher: nextVal };
+      } else {
+        nextVal = !c.starredByStudent;
+        return { ...c, starredByStudent: nextVal };
+      }
+    }
+    return c;
+  });
+  localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updated));
+  broadcastEvent({ type: 'CONVERSATION_CREATED', payload: { conversationId, role, starred: nextVal } });
+  return nextVal;
+}
+
+export function getStoredNotifications(userId: string): PortalNotification[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+    if (!raw) return [];
+    const all: PortalNotification[] = JSON.parse(raw);
+    return all
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => b.timestamp - a.timestamp);
+  } catch (e) {
+    return [];
+  }
+}
+
+export function addPortalNotification(
+  data: Omit<PortalNotification, 'id' | 'timestamp' | 'read'>
+): PortalNotification {
+  const newNotif: PortalNotification = {
+    id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    timestamp: Date.now(),
+    read: false,
+    ...data,
+  };
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+      const all: PortalNotification[] = raw ? JSON.parse(raw) : [];
+      all.unshift(newNotif);
+      const trimmed = all.slice(0, 50);
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(trimmed));
+    } catch (e) {
+      console.warn('Error saving notification:', e);
+    }
+  }
+
+  broadcastEvent({ type: 'NOTIFICATION_RECEIVED', payload: newNotif });
+  return newNotif;
+}
+
+export function markNotificationRead(notificationId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+    if (!raw) return;
+    const all: PortalNotification[] = JSON.parse(raw);
+    const updated = all.map((n) => (n.id === notificationId ? { ...n, read: true } : n));
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(updated));
+    broadcastEvent({ type: 'NOTIFICATION_RECEIVED', payload: { id: notificationId, read: true } });
+  } catch (e) {}
+}
+
+export function markAllNotificationsRead(userId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+    if (!raw) return;
+    const all: PortalNotification[] = JSON.parse(raw);
+    const updated = all.map((n) => (n.userId === userId ? { ...n, read: true } : n));
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(updated));
+    broadcastEvent({ type: 'NOTIFICATION_RECEIVED', payload: { userId, allRead: true } });
+  } catch (e) {}
+}
+
+export function clearNotifications(userId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+    if (!raw) return;
+    const all: PortalNotification[] = JSON.parse(raw);
+    const remaining = all.filter((n) => n.userId !== userId);
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(remaining));
+    broadcastEvent({ type: 'NOTIFICATION_RECEIVED', payload: { userId, cleared: true } });
+  } catch (e) {}
 }
 
 export function updateBookingProposalStatus(
@@ -618,6 +819,24 @@ export function updateBookingProposalStatus(
 
   localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages));
   broadcastEvent({ type: 'BOOKING_STATUS_CHANGED', payload: { conversationId, messageId, status } });
+
+  const conv = state.conversations.find((c) => c.id === conversationId);
+  if (conv) {
+    const student = state.students.find((s) => s.id === conv.studentId);
+    const teacher = state.teachers.find((t) => t.id === conv.teacherId);
+    if (student) {
+      addPortalNotification({
+        userId: student.id,
+        title: teacher ? teacher.fullName : 'Faculty Member',
+        content: status === 'accepted' ? 'Accepted consultation appointment request.' : 'Declined consultation appointment request.',
+        type: 'booking',
+        linkConversationId: conversationId,
+        senderName: teacher ? teacher.fullName : 'Faculty',
+        senderAvatar: teacher ? teacher.avatar : undefined,
+      });
+    }
+  }
+
   if (isSupabaseConfigured()) {
     updateSupabaseBookingStatus(messageId, status);
   }

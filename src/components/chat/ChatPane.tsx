@@ -114,6 +114,15 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
         }
         onRefresh();
       }
+      if (ev.type === 'MESSAGE_DELETED') {
+        onRefresh();
+      }
+      if (ev.type === 'CONVERSATION_READ' && ev.payload?.conversationId === conversation.id) {
+        onRefresh();
+      }
+      if (ev.type === 'BOOKING_STATUS_CHANGED' && ev.payload?.conversationId === conversation.id) {
+        onRefresh();
+      }
     });
     return () => unsubscribe();
   }, [conversation.id, currentUser.id, currentUser.role, onRefresh]);

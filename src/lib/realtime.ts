@@ -7,12 +7,15 @@ export interface PortalRealtimeEvent {
     | 'USER_LOGGED_OUT'
     | 'TEACHER_STATUS_UPDATED'
     | 'NEW_MESSAGE'
+    | 'MESSAGE_DELETED'
     | 'CONVERSATION_READ'
     | 'CONVERSATION_CREATED'
     | 'NOTES_UPDATED'
     | 'BOOKING_STATUS_CHANGED'
     | 'PROFILE_UPDATED'
-    | 'TYPING_STATUS';
+    | 'TYPING_STATUS'
+    | 'NOTIFICATION_RECEIVED'
+    | 'OFFICE_HOURS_UPDATED';
   payload?: any;
 }
 
@@ -83,6 +86,17 @@ function initializeSupabaseRealtime(): void {
             const message = rowToMessage(payload.new);
             syncUpdatedMessageToLocalStorage(message);
             notifyLocalListeners({ type: 'BOOKING_STATUS_CHANGED', payload: message });
+          }
+        }
+      )
+      // 2b. Listen for message deletions in Supabase
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'messages' },
+        (payload) => {
+          if (payload.old && payload.old.id) {
+            syncDeletedMessageFromLocalStorage(payload.old.id);
+            notifyLocalListeners({ type: 'MESSAGE_DELETED', payload: { messageId: payload.old.id } });
           }
         }
       )
@@ -160,6 +174,18 @@ function syncUpdatedMessageToLocalStorage(message: any): void {
     }
   } catch (e) {
     console.warn('Error syncing updated message locally:', e);
+  }
+}
+
+function syncDeletedMessageFromLocalStorage(messageId: string): void {
+  try {
+    const raw = localStorage.getItem('bjtu_portal_messages_v3');
+    if (!raw) return;
+    const list = JSON.parse(raw);
+    const filtered = list.filter((m: any) => m.id !== messageId);
+    localStorage.setItem('bjtu_portal_messages_v3', JSON.stringify(filtered));
+  } catch (e) {
+    console.warn('Error syncing deleted message locally:', e);
   }
 }
 
