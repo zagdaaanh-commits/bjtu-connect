@@ -88,6 +88,19 @@ export function initializePortalStorage(): PortalState {
         teachers = [
           ...parsed.map((t) => {
             const seed = INITIAL_TEACHERS.find((s) => s.id === t.id);
+            const isTAnhaa =
+              t.id === 'teacher_1788593795967' ||
+              (t as any).staffId === 'T25239002' ||
+              (t as any).staff_id === 'T25239002' ||
+              t.email === '25239003@bjtu.edu.cn' ||
+              (t.fullName && t.fullName.toLowerCase().includes('anhaa')) ||
+              ((t as any).full_name && (t as any).full_name.toLowerCase().includes('anhaa')) ||
+              t.role === 'admin' ||
+              (t as any).is_admin === true ||
+              (t as any).isAdmin === true;
+            if (isTAnhaa) {
+              return { ...(seed || {}), ...t, role: 'admin' as const, isAdmin: true, is_admin: true };
+            }
             return seed ? { ...seed, ...t } : t;
           }),
           ...missingSeeds,
@@ -108,7 +121,17 @@ export function initializePortalStorage(): PortalState {
         students = [
           ...parsed.map((s) => {
             const seed = INITIAL_STUDENTS.find((init) => init.id === s.id);
-            if (s.id === 'student_4' || (s as any).studentId === '25239002' || s.email === 'anhaa@bjtu.edu.cn') {
+            const isSAnhaa =
+              s.id === 'student_4' ||
+              (s as any).studentId === '25239002' ||
+              (s as any).student_id === '25239002' ||
+              s.email === 'anhaa@bjtu.edu.cn' ||
+              (s.fullName && s.fullName.toLowerCase().includes('anhaa')) ||
+              ((s as any).full_name && (s as any).full_name.toLowerCase().includes('anhaa')) ||
+              s.role === 'admin' ||
+              (s as any).is_admin === true ||
+              (s as any).isAdmin === true;
+            if (isSAnhaa) {
               return { ...(seed || {}), ...s, role: 'admin' as const, isAdmin: true, is_admin: true };
             }
             return seed ? { ...seed, ...s } : s;
@@ -169,14 +192,30 @@ export function initializePortalStorage(): PortalState {
     }
 
     let currentUser = rawCurrentUser ? JSON.parse(rawCurrentUser) : null;
-    if (
-      currentUser &&
-      (currentUser.id === 'student_4' ||
+    if (currentUser) {
+      const isCurAnhaa =
+        currentUser.id === 'student_4' ||
+        currentUser.id === 'teacher_1788593795967' ||
         currentUser.studentId === '25239002' ||
+        (currentUser as any).student_id === '25239002' ||
+        currentUser.staffId === 'T25239002' ||
+        (currentUser as any).staff_id === 'T25239002' ||
         currentUser.email === 'anhaa@bjtu.edu.cn' ||
-        currentUser.fullName?.toLowerCase().includes('anhaa'))
-    ) {
-      currentUser = { ...currentUser, role: 'admin', isAdmin: true, is_admin: true };
+        currentUser.email === '25239003@bjtu.edu.cn' ||
+        (currentUser.fullName && currentUser.fullName.toLowerCase().includes('anhaa')) ||
+        ((currentUser as any).full_name && (currentUser as any).full_name.toLowerCase().includes('anhaa')) ||
+        (currentUser.chineseName && currentUser.chineseName.toLowerCase().includes('anhaa')) ||
+        currentUser.role === 'admin' ||
+        (currentUser as any).is_admin === true ||
+        (currentUser as any).isAdmin === true;
+
+      if (isCurAnhaa) {
+        currentUser = { ...currentUser, role: 'admin', isAdmin: true, is_admin: true };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('bjtu_admin_session', 'true');
+          localStorage.setItem('bjtu_admin_user_id', currentUser.id);
+        }
+      }
     }
 
     return { teachers, students, courses, conversations, messages, currentUser };
@@ -210,23 +249,25 @@ export function getStoredState(): PortalState {
 
 export function isUserAdmin(user: UserProfile | null): boolean {
   if (!user) return false;
-  if (
-    user.role === 'admin' ||
-    (user as any).is_admin === true ||
-    (user as any).is_admin === 'true' ||
-    (user as any).isAdmin === true ||
-    (user as any).isAdmin === 'true'
-  ) {
-    return true;
-  }
-  if (
+  const isAnhaa = Boolean(
     user.id === 'student_4' ||
-    (user as any).studentId === '25239002' ||
-    user.email === 'anhaa@bjtu.edu.cn' ||
-    user.fullName?.toLowerCase().includes('anhaa')
-  ) {
-    return true;
-  }
+      user.id === 'teacher_1788593795967' ||
+      (user as any).studentId === '25239002' ||
+      (user as any).student_id === '25239002' ||
+      (user as any).staffId === 'T25239002' ||
+      (user as any).staff_id === 'T25239002' ||
+      user.email === 'anhaa@bjtu.edu.cn' ||
+      user.email === '25239003@bjtu.edu.cn' ||
+      (user.fullName && user.fullName.toLowerCase().includes('anhaa')) ||
+      ((user as any).full_name && (user as any).full_name.toLowerCase().includes('anhaa')) ||
+      (user.chineseName && user.chineseName.toLowerCase().includes('anhaa')) ||
+      user.role === 'admin' ||
+      (user as any).is_admin === true ||
+      (user as any).is_admin === 'true' ||
+      (user as any).isAdmin === true ||
+      (user as any).isAdmin === 'true'
+  );
+  if (isAnhaa) return true;
   if (typeof window !== 'undefined' && localStorage.getItem('bjtu_admin_session') === 'true') {
     return true;
   }
@@ -805,11 +846,22 @@ export async function hydrateFromSupabase(): Promise<boolean> {
           data.teachers?.find((t) => t.id === curUser.id);
         if (freshUser) {
           const merged = { ...curUser, ...freshUser };
-          const isAdmin =
+          const isAnhaaUser =
+            merged.id === 'student_4' ||
+            merged.id === 'teacher_1788593795967' ||
+            merged.studentId === '25239002' ||
+            (merged as any).student_id === '25239002' ||
+            merged.staffId === 'T25239002' ||
+            (merged as any).staff_id === 'T25239002' ||
+            merged.email === 'anhaa@bjtu.edu.cn' ||
+            merged.email === '25239003@bjtu.edu.cn' ||
+            (merged.fullName && merged.fullName.toLowerCase().includes('anhaa')) ||
+            ((merged as any).full_name && (merged as any).full_name.toLowerCase().includes('anhaa')) ||
             merged.role === 'admin' ||
             merged.is_admin === true ||
             merged.isAdmin === true;
-          if (isAdmin) {
+
+          if (isAnhaaUser) {
             merged.role = 'admin';
             merged.isAdmin = true;
             merged.is_admin = true;

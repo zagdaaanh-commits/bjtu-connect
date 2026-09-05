@@ -131,20 +131,35 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
       cleanId === 'anha' ||
       cleanId === 'ankhaa' ||
       cleanId === '25239002' ||
+      cleanId === 't25239002' ||
+      cleanId === '25239003' ||
       cleanId === 'admin' ||
-      cleanId === 'anhaa@bjtu.edu.cn'
+      cleanId === 'anhaa@bjtu.edu.cn' ||
+      cleanId === '25239003@bjtu.edu.cn'
     ) {
-      const adminStudent =
-        state.students.find(
-          (s) =>
-            s.id === 'student_4' ||
-            s.studentId === '25239002' ||
-            s.email.toLowerCase().includes('anhaa')
-        ) || state.students[3];
+      const adminTeacher = state.teachers.find(
+        (t) =>
+          t.id === 'teacher_1788593795967' ||
+          (t.staffId && t.staffId.toLowerCase() === 't25239002') ||
+          (t.fullName && t.fullName.toLowerCase().includes('anhaa')) ||
+          (t.email && t.email.toLowerCase().includes('25239003'))
+      );
+      const adminStudent = state.students.find(
+        (s) =>
+          s.id === 'student_4' ||
+          s.studentId === '25239002' ||
+          (s.fullName && s.fullName.toLowerCase().includes('anhaa')) ||
+          (s.email && s.email.toLowerCase().includes('anhaa'))
+      );
 
-      if (adminStudent) {
+      const targetAdmin =
+        selectedRole === 'teacher'
+          ? adminTeacher || adminStudent
+          : adminStudent || adminTeacher;
+
+      if (targetAdmin) {
         const userToLogin = {
-          ...adminStudent,
+          ...targetAdmin,
           role: 'admin' as const,
           isAdmin: true,
           is_admin: true,

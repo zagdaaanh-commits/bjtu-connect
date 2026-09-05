@@ -29,6 +29,28 @@ export const FACULTIES = [
 
 export const INITIAL_TEACHERS: TeacherProfile[] = [
   {
+    id: 'teacher_1788593795967',
+    role: 'admin',
+    isAdmin: true,
+    is_admin: true,
+    fullName: 'anhaa',
+    chineseName: '安哈 (Admin)',
+    staffId: 'T25239002',
+    title: 'Associate Professor & System Administrator',
+    faculty: 'School of Cyberspace Security (网络空间安全学院)',
+    facultyKey: 'sec',
+    department: 'Dept. of Computer Science & Cybersecurity',
+    officeLocation: 'Siyuan East Hall 302',
+    officeHours: 'Tue & Thu 14:00 - 16:30',
+    coursesTaughtIds: ['course_cs201'],
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+    email: '25239003@bjtu.edu.cn',
+    status: 'available',
+    customStatusMessage: 'System Administrator & Faculty Member. Full access granted.',
+    researchInterests: ['Intelligent Transportation Systems', 'Distributed Computing', 'Cybersecurity'],
+    password: 'admin',
+  },
+  {
     id: 'teacher_chen_zhang',
     role: 'teacher',
     fullName: 'Prof. Chen Zhang',

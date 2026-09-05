@@ -42,25 +42,39 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
   const { language, t, formatSchool, formatTeacher } = useLanguage();
 
-  const isAnhaa =
+  const isAnhaa = Boolean(
     currentUser.id === 'student_4' ||
+    currentUser.id === 'teacher_1788593795967' ||
+    currentUser.id.toLowerCase().includes('anhaa') ||
     (currentUser as any).studentId === '25239002' ||
+    (currentUser as any).student_id === '25239002' ||
+    (currentUser as any).staffId === 'T25239002' ||
+    (currentUser as any).staff_id === 'T25239002' ||
     currentUser.email === 'anhaa@bjtu.edu.cn' ||
-    currentUser.fullName.toLowerCase().includes('anhaa');
+    currentUser.email === '25239003@bjtu.edu.cn' ||
+    (currentUser.fullName && currentUser.fullName.toLowerCase().includes('anhaa')) ||
+    ((currentUser as any).full_name && (currentUser as any).full_name.toLowerCase().includes('anhaa')) ||
+    (currentUser.chineseName && currentUser.chineseName.toLowerCase().includes('anhaa')) ||
+    ((currentUser as any).chinese_name && (currentUser as any).chinese_name.toLowerCase().includes('anhaa')) ||
+    currentUser.role === 'admin' ||
+    (currentUser as any).is_admin === true ||
+    (currentUser as any).isAdmin === true
+  );
 
   const isAdmin =
+    isAnhaa ||
     currentUser.role === 'admin' ||
     (currentUser as any).is_admin === true ||
     (currentUser as any).is_admin === 'true' ||
     (currentUser as any).isAdmin === true ||
     (currentUser as any).isAdmin === 'true' ||
-    isAnhaa ||
     (typeof window !== 'undefined' && localStorage.getItem('bjtu_admin_session') === 'true');
 
   const isTeacher =
-    currentUser.role === 'teacher' ||
-    Boolean((currentUser as any).coursesTaughtIds) ||
-    Boolean((currentUser as any).title);
+    !isAdmin &&
+    (currentUser.role === 'teacher' ||
+      Boolean((currentUser as any).coursesTaughtIds) ||
+      Boolean((currentUser as any).title));
 
   const adminUserId =
     typeof window !== 'undefined' ? localStorage.getItem('bjtu_admin_user_id') : null;
@@ -68,11 +82,13 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     ? students.find((s) => s.id === adminUserId) || teachers.find((t) => t.id === adminUserId)
     : null;
 
-  const displayName = isTeacher
+  const displayName = isAnhaa
+    ? 'anhaa'
+    : isTeacher
     ? formatTeacher(currentUser as TeacherProfile)
     : language === 'zh'
-    ? currentUser.chineseName || currentUser.fullName
-    : currentUser.fullName;
+    ? currentUser.chineseName || currentUser.fullName || (currentUser as any).full_name || 'User'
+    : currentUser.fullName || (currentUser as any).full_name || 'User';
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -186,7 +202,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                   status={isTeacher ? (currentUser as TeacherProfile).status : undefined}
                 />
 
-                <div className="text-left hidden sm:block">
+                <div className="text-left flex flex-col justify-center">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-slate-900 leading-none">
                       {displayName}
@@ -209,7 +225,9 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-500 block truncate max-w-[130px] mt-0.5">
-                    {formatSchool(currentUser.facultyKey || currentUser.faculty)}
+                    {isAdmin
+                      ? (language === 'zh' ? '全校系统管理员' : 'System Administrator')
+                      : formatSchool(currentUser.facultyKey || currentUser.faculty)}
                   </span>
                 </div>
 
