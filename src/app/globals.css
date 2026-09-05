@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    scroll-behavior: smooth;
+  }
+  body {
+    overscroll-behavior: none;
+  }
+  main > :first-child {
+    margin-top: 0 !important;
+  }
+  main > :last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+:root {
+  --background: 153 18% 7%;
+  --foreground: 120 9% 88%;
+  --border: 147 11% 24%;
+  --input: 147 11% 24%;
+  --ring: 156 72% 59%;
+}
+
+body {
+  color: #dee4de;
+  background: #0f1512;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Custom scrollbar for dark obsidian aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090f0c;
+}
+::-webkit-scrollbar-thumb {
+  background: #252b28;
+  border-radius: 9999px;
+  border: 1px solid #3c4a42;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #343b37;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+}
+
+.animate-status-pulse {
+  animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#0D5C3A" fill-opacity="0.9"/>
+  <rect x="1" y="1" width="62" height="62" rx="15" stroke="url(#emerald_glow)" stroke-width="1.5" stroke-opacity="0.6"/>
+  <!-- Track & Academic Rail Emblem -->
+  <circle cx="32" cy="32" r="22" stroke="#10B981" stroke-width="2" stroke-dasharray="3 3" opacity="0.4"/>
+  <path d="M22 42L32 18L42 42" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M26 34H38" stroke="#10B981" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="32" cy="18" r="3.5" fill="#FCD34D"/>
+  <path d="M18 44C24 47 40 47 46 44" stroke="#6EE7B7" stroke-width="2.5" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="emerald_glow" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="0.5" stop-color="#059669"/>
+      <stop offset="1" stop-color="#022C1A"/>
+    </linearGradient>
+  </defs>
+</svg>

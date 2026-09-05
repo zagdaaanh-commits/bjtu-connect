@@ -1,0 +1,673 @@
+import {
+  StudentProfile,
+  TeacherProfile,
+  Course,
+  Conversation,
+  Message,
+  UserProfile,
+  TeacherStatus,
+  InquiryTag,
+  Attachment,
+} from '../types/portal';
+import {
+  INITIAL_TEACHERS,
+  INITIAL_STUDENTS,
+  COURSES,
+  INITIAL_CONVERSATIONS,
+  INITIAL_MESSAGES,
+} from '../data/dummyData';
+import { broadcastEvent } from './realtime';
+
+const STORAGE_KEYS = {
+  TEACHERS: 'bjtu_portal_teachers_v3',
+  STUDENTS: 'bjtu_portal_students_v3',
+  COURSES: 'bjtu_portal_courses_v3',
+  CONVERSATIONS: 'bjtu_portal_conversations_v3',
+  MESSAGES: 'bjtu_portal_messages_v3',
+  CURRENT_USER: 'bjtu_portal_current_user_v3',
+};
+
+export interface PortalState {
+  teachers: TeacherProfile[];
+  students: StudentProfile[];
+  courses: Course[];
+  conversations: Conversation[];
+  messages: Message[];
+  currentUser: UserProfile | null;
+}
+
+export function initializePortalStorage(): PortalState {
+  if (typeof window === 'undefined') {
+    return {
+      teachers: INITIAL_TEACHERS,
+      students: INITIAL_STUDENTS,
+      courses: COURSES,
+      conversations: INITIAL_CONVERSATIONS,
+      messages: INITIAL_MESSAGES,
+      currentUser: null,
+    };
+  }
+
+  try {
+    const rawTeachers = localStorage.getItem(STORAGE_KEYS.TEACHERS);
+    const rawStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
+    const rawCourses = localStorage.getItem(STORAGE_KEYS.COURSES);
+    const rawConversations = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
+    const rawMessages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
+    const rawCurrentUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+
+    if (!rawTeachers || !rawStudents || !rawConversations || !rawMessages) {
+      resetPortalStorage();
+      return {
+        teachers: INITIAL_TEACHERS,
+        students: INITIAL_STUDENTS,
+        courses: COURSES,
+        conversations: INITIAL_CONVERSATIONS,
+        messages: INITIAL_MESSAGES,
+        currentUser: null,
+      };
+    }
+
+    let teachers: TeacherProfile[] = INITIAL_TEACHERS;
+    if (rawTeachers) {
+      try {
+        const parsed: TeacherProfile[] = JSON.parse(rawTeachers);
+        const parsedIds = new Set(parsed.map((t) => t.id));
+        const missingSeeds = INITIAL_TEACHERS.filter((t) => !parsedIds.has(t.id));
+        teachers = [
+          ...parsed.map((t) => {
+            const seed = INITIAL_TEACHERS.find((s) => s.id === t.id);
+            return seed ? { ...seed, ...t } : t;
+          }),
+          ...missingSeeds,
+        ];
+        if (missingSeeds.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(teachers));
+        }
+      } catch {
+        teachers = INITIAL_TEACHERS;
+      }
+    }
+    let students: StudentProfile[] = INITIAL_STUDENTS;
+    if (rawStudents) {
+      try {
+        const parsed: StudentProfile[] = JSON.parse(rawStudents);
+        const parsedIds = new Set(parsed.map((s) => s.id));
+        const missingSeeds = INITIAL_STUDENTS.filter((s) => !parsedIds.has(s.id));
+        students = [
+          ...parsed.map((s) => {
+            const seed = INITIAL_STUDENTS.find((init) => init.id === s.id);
+            return seed ? { ...seed, ...s } : s;
+          }),
+          ...missingSeeds,
+        ];
+        if (missingSeeds.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+        }
+      } catch {
+        students = INITIAL_STUDENTS;
+      }
+    }
+
+    let courses: Course[] = COURSES;
+    if (rawCourses) {
+      try {
+        const parsed: Course[] = JSON.parse(rawCourses);
+        const parsedIds = new Set(parsed.map((c) => c.id));
+        const missingSeeds = COURSES.filter((c) => !parsedIds.has(c.id));
+        courses = [...parsed, ...missingSeeds].map((c) => {
+          const seed = COURSES.find((s) => s.id === c.id);
+          return seed ? { ...seed, ...c } : c;
+        });
+      } catch {
+        courses = COURSES;
+      }
+    }
+
+    let conversations: Conversation[] = INITIAL_CONVERSATIONS;
+    if (rawConversations) {
+      try {
+        const parsed: Conversation[] = JSON.parse(rawConversations);
+        const parsedIds = new Set(parsed.map((c) => c.id));
+        const missingSeeds = INITIAL_CONVERSATIONS.filter((c) => !parsedIds.has(c.id));
+        conversations = [...parsed, ...missingSeeds];
+        if (missingSeeds.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(conversations));
+        }
+      } catch {
+        conversations = INITIAL_CONVERSATIONS;
+      }
+    }
+
+    let messages: Message[] = INITIAL_MESSAGES;
+    if (rawMessages) {
+      try {
+        const parsed: Message[] = JSON.parse(rawMessages);
+        const parsedIds = new Set(parsed.map((m) => m.id));
+        const missingSeeds = INITIAL_MESSAGES.filter((m) => !parsedIds.has(m.id));
+        messages = [...parsed, ...missingSeeds];
+        if (missingSeeds.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages));
+        }
+      } catch {
+        messages = INITIAL_MESSAGES;
+      }
+    }
+
+    const currentUser = rawCurrentUser ? JSON.parse(rawCurrentUser) : null;
+
+    return { teachers, students, courses, conversations, messages, currentUser };
+  } catch (err) {
+    console.error('Error reading portal storage, falling back to seed data:', err);
+    return {
+      teachers: INITIAL_TEACHERS,
+      students: INITIAL_STUDENTS,
+      courses: COURSES,
+      conversations: INITIAL_CONVERSATIONS,
+      messages: INITIAL_MESSAGES,
+      currentUser: null,
+    };
+  }
+}
+
+export function resetPortalStorage(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(INITIAL_TEACHERS));
+  localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
+  localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(COURSES));
+  localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(INITIAL_CONVERSATIONS));
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(INITIAL_MESSAGES));
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  broadcastEvent({ type: 'DATA_RESET' });
+}
+
+export function getStoredState(): PortalState {
+  return initializePortalStorage();
+}
+
+export function loginUser(user: UserProfile): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+  broadcastEvent({ type: 'USER_SWITCHED', payload: user });
+}
+
+export function logoutUser(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  broadcastEvent({ type: 'USER_LOGGED_OUT' });
+}
+
+export function registerStudent(data: {
+  fullName: string;
+  chineseName?: string;
+  studentId: string;
+  faculty: string;
+  facultyKey: any;
+  major: string;
+  grade: string;
+  classGroup: string;
+  email: string;
+  avatar?: string;
+}): StudentProfile {
+  const state = getStoredState();
+  const newStudent: StudentProfile = {
+    id: `student_${Date.now()}`,
+    role: 'student',
+    fullName: data.fullName,
+    chineseName: data.chineseName,
+    studentId: data.studentId,
+    faculty: data.faculty,
+    facultyKey: data.facultyKey,
+    major: data.major,
+    grade: data.grade,
+    classGroup: data.classGroup,
+    avatar:
+      data.avatar ||
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    email: data.email,
+    enrolledCourseIds: ['course_cs201', 'course_ai405'],
+    gpa: '3.80 / 4.0',
+  };
+
+  const updatedStudents = [...state.students, newStudent];
+  localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(updatedStudents));
+  loginUser(newStudent);
+  return newStudent;
+}
+
+export function registerTeacher(data: {
+  fullName: string;
+  chineseName?: string;
+  staffId?: string;
+  title: string;
+  faculty: string;
+  facultyKey: any;
+  department: string;
+  officeLocation: string;
+  officeHours: string;
+  email: string;
+  avatar?: string;
+}): TeacherProfile {
+  const state = getStoredState();
+  const newTeacher: TeacherProfile = {
+    id: `teacher_${Date.now()}`,
+    role: 'teacher',
+    fullName: data.fullName,
+    chineseName: data.chineseName,
+    staffId: data.staffId || `BJTU-T${Math.floor(10000 + Math.random() * 90000)}`,
+    title: data.title,
+    faculty: data.faculty,
+    facultyKey: data.facultyKey,
+    department: data.department,
+    officeLocation: data.officeLocation,
+    officeHours: data.officeHours,
+    coursesTaughtIds: ['course_cs201'],
+    avatar:
+      data.avatar ||
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+    email: data.email,
+    status: 'available',
+    customStatusMessage: 'Office doors open. Welcome for consultations.',
+    researchInterests: ['Intelligent Transportation Systems', 'Distributed Computing'],
+  };
+
+  const updatedTeachers = [...state.teachers, newTeacher];
+  localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(updatedTeachers));
+  loginUser(newTeacher);
+  return newTeacher;
+}
+
+export function switchCurrentUser(userId: string, role: 'student' | 'teacher'): UserProfile {
+  const state = getStoredState();
+  let user: UserProfile | undefined;
+  if (role === 'teacher') {
+    user = state.teachers.find((t) => t.id === userId) || state.teachers[0];
+  } else {
+    user = state.students.find((s) => s.id === userId) || state.students[0];
+  }
+  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+  broadcastEvent({ type: 'USER_SWITCHED', payload: user });
+  return user;
+}
+
+export function updateTeacherStatus(teacherId: string, status: TeacherStatus, customMessage?: string): void {
+  const state = getStoredState();
+  const updatedTeachers = state.teachers.map((t) => {
+    if (t.id === teacherId) {
+      return {
+        ...t,
+        status,
+        customStatusMessage: customMessage !== undefined ? customMessage : t.customStatusMessage,
+      };
+    }
+    return t;
+  });
+
+  if (state.currentUser && state.currentUser.id === teacherId) {
+    const updatedCurrentUser = {
+      ...state.currentUser,
+      status,
+      customStatusMessage: customMessage !== undefined ? customMessage : (state.currentUser as TeacherProfile).customStatusMessage,
+    } as TeacherProfile;
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedCurrentUser));
+  }
+
+  localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(updatedTeachers));
+  broadcastEvent({ type: 'TEACHER_STATUS_UPDATED', payload: { teacherId, status, customMessage } });
+}
+
+export function updateTeacherNotes(conversationId: string, notes: string): void {
+  const state = getStoredState();
+  const updated = state.conversations.map((c) => {
+    if (c.id === conversationId) {
+      return { ...c, teacherNotes: notes };
+    }
+    return c;
+  });
+  localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updated));
+  broadcastEvent({ type: 'NOTES_UPDATED', payload: { conversationId, notes } });
+}
+
+export function markConversationRead(conversationId: string, readerRole: 'student' | 'teacher'): void {
+  const state = getStoredState();
+
+  const updatedMessages = state.messages.map((m) => {
+    if (m.conversationId === conversationId && m.senderRole !== readerRole && m.status !== 'read') {
+      return { ...m, status: 'read' as const };
+    }
+    return m;
+  });
+
+  const updatedConversations = state.conversations.map((c) => {
+    if (c.id === conversationId) {
+      return {
+        ...c,
+        unreadCountStudent: readerRole === 'student' ? 0 : c.unreadCountStudent,
+        unreadCountTeacher: readerRole === 'teacher' ? 0 : c.unreadCountTeacher,
+        lastMessage: c.lastMessage && c.lastMessage.senderId !== (readerRole === 'student' ? c.studentId : c.teacherId)
+          ? { ...c.lastMessage, status: 'read' as const }
+          : c.lastMessage,
+      };
+    }
+    return c;
+  });
+
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages));
+  localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updatedConversations));
+  broadcastEvent({ type: 'CONVERSATION_READ', payload: { conversationId, readerRole } });
+}
+
+export function createOrGetConversation(studentId: string, teacherId: string, courseId?: string, tag?: InquiryTag): Conversation {
+  const state = getStoredState();
+  let conv = state.conversations.find((c) => c.studentId === studentId && c.teacherId === teacherId);
+
+  if (!conv) {
+    const newConv: Conversation = {
+      id: `conv_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      studentId,
+      teacherId,
+      courseId,
+      topicTag: tag || 'General Inquiry',
+      unreadCountStudent: 0,
+      unreadCountTeacher: 0,
+      starredByTeacher: false,
+      teacherNotes: '',
+      updatedAt: Date.now(),
+    };
+    const updated = [newConv, ...state.conversations];
+    localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updated));
+    broadcastEvent({ type: 'CONVERSATION_CREATED', payload: newConv });
+    return newConv;
+  }
+
+  if (tag && conv.topicTag !== tag) {
+    conv = { ...conv, topicTag: tag };
+    const updated = state.conversations.map((c) => (c.id === conv!.id ? conv! : c));
+    localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updated));
+  }
+
+  return conv;
+}
+
+export function sendPortalMessage(params: {
+  conversationId: string;
+  senderId: string;
+  senderRole: 'student' | 'teacher';
+  senderName: string;
+  senderAvatar: string;
+  content: string;
+  tag?: InquiryTag;
+  attachments?: Attachment[];
+  bookingProposal?: Message['bookingProposal'];
+}): Message {
+  const state = getStoredState();
+  const newMsg: Message = {
+    id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    conversationId: params.conversationId,
+    senderId: params.senderId,
+    senderRole: params.senderRole,
+    senderName: params.senderName,
+    senderAvatar: params.senderAvatar,
+    content: params.content,
+    timestamp: Date.now(),
+    status: 'delivered',
+    tag: params.tag,
+    attachments: params.attachments,
+    bookingProposal: params.bookingProposal,
+  };
+
+  const updatedMessages = [...state.messages, newMsg];
+
+  const updatedConversations = state.conversations.map((c) => {
+    if (c.id === params.conversationId) {
+      return {
+        ...c,
+        updatedAt: newMsg.timestamp,
+        topicTag: params.tag || c.topicTag,
+        unreadCountStudent: params.senderRole === 'teacher' ? c.unreadCountStudent + 1 : c.unreadCountStudent,
+        unreadCountTeacher: params.senderRole === 'student' ? c.unreadCountTeacher + 1 : c.unreadCountTeacher,
+        lastMessage: {
+          content: params.content,
+          timestamp: newMsg.timestamp,
+          senderId: params.senderId,
+          status: 'delivered' as const,
+          tag: params.tag,
+        },
+      };
+    }
+    return c;
+  });
+
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages));
+  localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updatedConversations));
+  broadcastEvent({ type: 'NEW_MESSAGE', payload: newMsg });
+
+  return newMsg;
+}
+
+export function updateBookingProposalStatus(
+  conversationId: string,
+  messageId: string,
+  status: 'accepted' | 'declined'
+): void {
+  const state = getStoredState();
+  const updatedMessages = state.messages.map((m) => {
+    if (m.id === messageId && m.bookingProposal) {
+      return {
+        ...m,
+        bookingProposal: {
+          ...m.bookingProposal,
+          status,
+        },
+      };
+    }
+    return m;
+  });
+
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages));
+  broadcastEvent({ type: 'BOOKING_STATUS_CHANGED', payload: { conversationId, messageId, status } });
+}
+
+export function updateProfile(updated: UserProfile): void {
+  const state = getStoredState();
+  if (updated.role === 'teacher') {
+    const updatedTeachers = state.teachers.map((t) => (t.id === updated.id ? (updated as TeacherProfile) : t));
+    localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(updatedTeachers));
+  } else {
+    const updatedStudents = state.students.map((s) => (s.id === updated.id ? (updated as StudentProfile) : s));
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(updatedStudents));
+  }
+
+  // Synchronize avatar and full name in all messages sent by this user
+  const updatedMessages = state.messages.map((m) => {
+    if (m.senderId === updated.id) {
+      return { ...m, senderAvatar: updated.avatar, senderName: updated.fullName };
+    }
+    return m;
+  });
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages));
+
+  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
+  broadcastEvent({ type: 'PROFILE_UPDATED', payload: updated });
+}
+
+export function updateUserAvatar(newAvatar: string): void {
+  const state = getStoredState();
+  if (state.currentUser) {
+    const updated = { ...state.currentUser, avatar: newAvatar };
+    updateProfile(updated);
+  }
+}
+
+export function enrollStudentCourse(studentId: string, courseId: string): { success: boolean; message: string } {
+  const state = getStoredState();
+  const student = state.students.find((s) => s.id === studentId);
+  if (!student) return { success: false, message: 'Student not found' };
+
+  if (student.enrolledCourseIds.includes(courseId)) {
+    return { success: false, message: 'Already enrolled in this course (该课程已选)' };
+  }
+
+  const courseList = state.courses && state.courses.length > 0 ? state.courses : COURSES;
+  const course = courseList.find((c) => c.id === courseId);
+  if (!course) return { success: false, message: 'Course not found' };
+
+  // Calculate current total credits
+  const currentCourses = courseList.filter((c) => student.enrolledCourseIds.includes(c.id));
+  const currentCredits = currentCourses.reduce((sum, c) => sum + c.credits, 0);
+  if (currentCredits + course.credits > 28) {
+    return {
+      success: false,
+      message: `Cannot exceed maximum 28 credits (超出学分上限28学分，当前已选${currentCredits}学分)`,
+    };
+  }
+
+  const updatedCourseIds = [...student.enrolledCourseIds, courseId];
+  const updatedStudent: StudentProfile = {
+    ...student,
+    enrolledCourseIds: updatedCourseIds,
+  };
+
+  const updatedStudents = state.students.map((s) => (s.id === studentId ? updatedStudent : s));
+  localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(updatedStudents));
+
+  if (state.currentUser && state.currentUser.id === studentId) {
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedStudent));
+  }
+
+  // Update course enrolledCount
+  const updatedCourses = courseList.map((c) => {
+    if (c.id === courseId) {
+      return { ...c, enrolledCount: (c.enrolledCount || 0) + 1 };
+    }
+    return c;
+  });
+  localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(updatedCourses));
+
+  broadcastEvent({
+    type: 'PROFILE_UPDATED',
+    payload: updatedStudent,
+  });
+
+  return { success: true, message: `Successfully enrolled in ${course.code} (选课成功)` };
+}
+
+export function dropStudentCourse(studentId: string, courseId: string): { success: boolean; message: string } {
+  const state = getStoredState();
+  const student = state.students.find((s) => s.id === studentId);
+  if (!student) return { success: false, message: 'Student not found' };
+
+  if (!student.enrolledCourseIds.includes(courseId)) {
+    return { success: false, message: 'Not enrolled in this course (未选修该课程)' };
+  }
+
+  const courseList = state.courses && state.courses.length > 0 ? state.courses : COURSES;
+  const course = courseList.find((c) => c.id === courseId);
+  const updatedCourseIds = student.enrolledCourseIds.filter((id) => id !== courseId);
+  const updatedStudent: StudentProfile = {
+    ...student,
+    enrolledCourseIds: updatedCourseIds,
+  };
+
+  const updatedStudents = state.students.map((s) => (s.id === studentId ? updatedStudent : s));
+  localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(updatedStudents));
+
+  if (state.currentUser && state.currentUser.id === studentId) {
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedStudent));
+  }
+
+  // Decrement course enrolledCount
+  const updatedCourses = courseList.map((c) => {
+    if (c.id === courseId && c.enrolledCount && c.enrolledCount > 0) {
+      return { ...c, enrolledCount: c.enrolledCount - 1 };
+    }
+    return c;
+  });
+  localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(updatedCourses));
+
+  broadcastEvent({
+    type: 'PROFILE_UPDATED',
+    payload: updatedStudent,
+  });
+
+  return { success: true, message: `Dropped ${course?.code || ''} from enrolled courses (退选成功)` };
+}
+
+export function createCustomCourse(
+  data: {
+    code: string;
+    name: string;
+    chineseName?: string;
+    faculty: string;
+    facultyKey: any;
+    teacherId?: string;
+    customTeacherName?: string;
+    semester?: string;
+    schedule?: string;
+    classroom: string;
+    credits: number;
+    category?: 'required' | 'elective' | 'general';
+    capacity?: number;
+    dayOfWeek?: number[];
+    periodSlot?: number;
+  },
+  studentIdToEnroll?: string
+): Course {
+  const state = getStoredState();
+
+  // If a custom teacher name was provided and no teacherId, find or attach to a default or create placeholder
+  let assignedTeacherId = data.teacherId;
+  if (!assignedTeacherId || assignedTeacherId === 'custom') {
+    const defaultTeacher = state.teachers.find((t) => t.facultyKey === data.facultyKey) || state.teachers[0];
+    assignedTeacherId = defaultTeacher?.id || 'teacher_1';
+  }
+
+  const daysText = (data.dayOfWeek || [1])
+    .map((d) => (d === 1 ? 'Mon' : d === 2 ? 'Tue' : d === 3 ? 'Wed' : d === 4 ? 'Thu' : 'Fri'))
+    .join(', ');
+
+  const periodTimes: Record<number, string> = {
+    1: '08:00-09:35',
+    2: '10:00-11:35',
+    3: '14:00-15:35',
+    4: '16:00-17:35',
+    5: '19:00-20:35',
+  };
+  const timeStr = periodTimes[data.periodSlot || 1] || '08:00-09:35';
+  const finalSchedule = data.schedule || `${daysText} ${timeStr}`;
+
+  const newCourse: Course = {
+    id: `course_custom_${Date.now()}`,
+    code: data.code.trim().toUpperCase(),
+    name: data.name.trim(),
+    chineseName: data.chineseName?.trim() || data.name.trim(),
+    faculty: data.faculty,
+    facultyKey: data.facultyKey,
+    teacherId: assignedTeacherId,
+    semester: data.semester || 'Fall 2026',
+    schedule: finalSchedule,
+    classroom: data.classroom.trim() || 'Siyuan Building (思源楼)',
+    credits: Number(data.credits) || 3,
+    category: data.category || 'elective',
+    capacity: Number(data.capacity) || 50,
+    enrolledCount: studentIdToEnroll ? 1 : 0,
+    dayOfWeek: data.dayOfWeek && data.dayOfWeek.length > 0 ? data.dayOfWeek : [1],
+    periodSlot: Number(data.periodSlot) || 1,
+  };
+
+  const updatedCourses = [newCourse, ...state.courses];
+  localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(updatedCourses));
+
+  if (studentIdToEnroll) {
+    enrollStudentCourse(studentIdToEnroll, newCourse.id);
+  }
+
+  broadcastEvent({
+    type: 'PROFILE_UPDATED',
+    payload: newCourse,
+  });
+
+  return newCourse;
+}
+
+

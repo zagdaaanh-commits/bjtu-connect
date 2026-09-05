@@ -1,0 +1,24 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#0B254A" />
+  <circle cx="50" cy="50" r="46" stroke="#D4AF37" stroke-width="2.5" />
+  <circle cx="50" cy="50" r="41" stroke="#D4AF37" stroke-width="1" stroke-dasharray="3 1.5" />
+  <circle cx="50" cy="50" r="38" stroke="#D4AF37" stroke-width="0.8" opacity="0.6" />
+  <circle cx="50" cy="50" r="28" fill="#061730" stroke="#D4AF37" stroke-width="1.5" />
+  
+  {/* Open Book Base */}
+  <path d="M36 63 C43 60 48 62 50 64 C52 62 57 60 64 63 L63 56 C57 53 52 55 50 57 C48 55 43 53 37 56 Z" fill="#D4AF37" />
+  {/* Anvil Base */}
+  <path d="M40 54 L60 54 L58 48 L42 48 Z" fill="#F5DEB3" stroke="#D4AF37" stroke-width="0.5" />
+  {/* Crossed Hammer & Tool */}
+  <path d="M39 38 L61 60 M61 38 L39 60" stroke="#D4AF37" stroke-width="2" stroke-linecap="round" />
+  {/* Cog / Gear Center */}
+  <circle cx="50" cy="46" r="5" fill="#D4AF37" />
+  <circle cx="50" cy="46" r="2.5" fill="#0B254A" />
+
+  {/* Top Text: 北京交通大学 */}
+  <text x="50" y="17" text-anchor="middle" fill="#FFFFFF" font-size="6.5" font-weight="bold" font-family="sans-serif" letter-spacing="1">北京交通大学</text>
+  {/* Year: 1896 */}
+  <text x="50" y="74" text-anchor="middle" fill="#D4AF37" font-size="5.5" font-weight="bold" font-family="sans-serif" letter-spacing="1">• 1896 •</text>
+  {/* Bottom: BEIJING JIAOTONG */}
+  <text x="50" y="85" text-anchor="middle" fill="#94A3B8" font-size="5" font-weight="600" font-family="sans-serif" letter-spacing="0.8">BEIJING JIAOTONG</text>
+</svg>
