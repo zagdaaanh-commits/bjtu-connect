@@ -5,6 +5,7 @@ import {
   PortalState,
   getStoredState,
   logoutUser,
+  hydrateFromSupabase,
 } from '../lib/storage';
 import {
   subscribeToPortalEvents,
@@ -41,7 +42,14 @@ export default function HomePage() {
     setMounted(true);
     refreshState();
 
-    // Subscribe to cross-tab realtime events
+    // Hydrate latest data from Supabase in background
+    hydrateFromSupabase().then((hydrated) => {
+      if (hydrated) {
+        refreshState();
+      }
+    });
+
+    // Subscribe to cross-tab & Supabase realtime events
     const unsubscribe = subscribeToPortalEvents((event) => {
       refreshState();
 

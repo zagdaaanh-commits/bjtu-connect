@@ -17,6 +17,17 @@ import {
   INITIAL_MESSAGES,
 } from '../data/dummyData';
 import { broadcastEvent } from './realtime';
+import {
+  isSupabaseConfigured,
+  fetchSupabaseState,
+  insertSupabaseMessage,
+  upsertSupabaseConversation,
+  updateSupabaseTeacherStatus,
+  updateSupabaseNotes,
+  updateSupabaseBookingStatus,
+  markSupabaseConversationRead,
+  upsertSupabaseUser,
+} from './supabase';
 
 const STORAGE_KEYS = {
   TEACHERS: 'bjtu_portal_teachers_v3',
@@ -232,6 +243,9 @@ export function registerStudent(data: {
   const updatedStudents = [...state.students, newStudent];
   localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(updatedStudents));
   loginUser(newStudent);
+  if (isSupabaseConfigured()) {
+    upsertSupabaseUser(newStudent);
+  }
   return newStudent;
 }
 
@@ -274,6 +288,9 @@ export function registerTeacher(data: {
   const updatedTeachers = [...state.teachers, newTeacher];
   localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(updatedTeachers));
   loginUser(newTeacher);
+  if (isSupabaseConfigured()) {
+    upsertSupabaseUser(newTeacher);
+  }
   return newTeacher;
 }
 
@@ -314,6 +331,9 @@ export function updateTeacherStatus(teacherId: string, status: TeacherStatus, cu
 
   localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(updatedTeachers));
   broadcastEvent({ type: 'TEACHER_STATUS_UPDATED', payload: { teacherId, status, customMessage } });
+  if (isSupabaseConfigured()) {
+    updateSupabaseTeacherStatus(teacherId, status, customMessage);
+  }
 }
 
 export function updateTeacherNotes(conversationId: string, notes: string): void {
@@ -326,6 +346,9 @@ export function updateTeacherNotes(conversationId: string, notes: string): void 
   });
   localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updated));
   broadcastEvent({ type: 'NOTES_UPDATED', payload: { conversationId, notes } });
+  if (isSupabaseConfigured()) {
+    updateSupabaseNotes(conversationId, notes);
+  }
 }
 
 export function markConversationRead(conversationId: string, readerRole: 'student' | 'teacher'): void {
@@ -355,6 +378,9 @@ export function markConversationRead(conversationId: string, readerRole: 'studen
   localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages));
   localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updatedConversations));
   broadcastEvent({ type: 'CONVERSATION_READ', payload: { conversationId, readerRole } });
+  if (isSupabaseConfigured()) {
+    markSupabaseConversationRead(conversationId, readerRole);
+  }
 }
 
 export function createOrGetConversation(studentId: string, teacherId: string, courseId?: string, tag?: InquiryTag): Conversation {
@@ -377,6 +403,9 @@ export function createOrGetConversation(studentId: string, teacherId: string, co
     const updated = [newConv, ...state.conversations];
     localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updated));
     broadcastEvent({ type: 'CONVERSATION_CREATED', payload: newConv });
+    if (isSupabaseConfigured()) {
+      upsertSupabaseConversation(newConv);
+    }
     return newConv;
   }
 
@@ -384,6 +413,9 @@ export function createOrGetConversation(studentId: string, teacherId: string, co
     conv = { ...conv, topicTag: tag };
     const updated = state.conversations.map((c) => (c.id === conv!.id ? conv! : c));
     localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updated));
+    if (isSupabaseConfigured()) {
+      upsertSupabaseConversation(conv);
+    }
   }
 
   return conv;
@@ -442,6 +474,14 @@ export function sendPortalMessage(params: {
   localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(updatedConversations));
   broadcastEvent({ type: 'NEW_MESSAGE', payload: newMsg });
 
+  if (isSupabaseConfigured()) {
+    insertSupabaseMessage(newMsg);
+    const convToUpdate = updatedConversations.find((c) => c.id === params.conversationId);
+    if (convToUpdate) {
+      upsertSupabaseConversation(convToUpdate);
+    }
+  }
+
   return newMsg;
 }
 
@@ -466,6 +506,9 @@ export function updateBookingProposalStatus(
 
   localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages));
   broadcastEvent({ type: 'BOOKING_STATUS_CHANGED', payload: { conversationId, messageId, status } });
+  if (isSupabaseConfigured()) {
+    updateSupabaseBookingStatus(messageId, status);
+  }
 }
 
 export function updateProfile(updated: UserProfile): void {
@@ -489,6 +532,9 @@ export function updateProfile(updated: UserProfile): void {
 
   localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
   broadcastEvent({ type: 'PROFILE_UPDATED', payload: updated });
+  if (isSupabaseConfigured()) {
+    upsertSupabaseUser(updated);
+  }
 }
 
 export function updateUserAvatar(newAvatar: string): void {
@@ -668,6 +714,39 @@ export function createCustomCourse(
   });
 
   return newCourse;
+}
+
+/**
+ * Hydrates local storage state from Supabase PostgreSQL database if available
+ */
+export async function hydrateFromSupabase(): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  try {
+    const data = await fetchSupabaseState();
+    if (!data) return false;
+
+    if (data.teachers && data.teachers.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(data.teachers));
+    }
+    if (data.students && data.students.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(data.students));
+    }
+    if (data.courses && data.courses.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(data.courses));
+    }
+    if (data.conversations && data.conversations.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(data.conversations));
+    }
+    if (data.messages && data.messages.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(data.messages));
+    }
+
+    broadcastEvent({ type: 'DATA_RESET' });
+    return true;
+  } catch (err) {
+    console.warn('Hydration from Supabase encountered error:', err);
+    return false;
+  }
 }
 
 
