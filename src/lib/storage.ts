@@ -191,14 +191,26 @@ export function initializePortalStorage(): PortalState {
       }
     }
 
-    let currentUser = rawCurrentUser ? JSON.parse(rawCurrentUser) : null;
+    const isSessionActive =
+      typeof window !== 'undefined' &&
+      sessionStorage.getItem('bjtu_session_active') === 'true';
+
+    let currentUser: UserProfile | null = null;
+    if (isSessionActive && rawCurrentUser) {
+      try {
+        currentUser = JSON.parse(rawCurrentUser);
+      } catch {
+        currentUser = null;
+      }
+    }
+
     if (currentUser) {
       const isCurAnhaa =
         currentUser.id === 'student_4' ||
         currentUser.id === 'teacher_1788593795967' ||
-        currentUser.studentId === '25239002' ||
+        (currentUser as any).studentId === '25239002' ||
         (currentUser as any).student_id === '25239002' ||
-        currentUser.staffId === 'T25239002' ||
+        (currentUser as any).staffId === 'T25239002' ||
         (currentUser as any).staff_id === 'T25239002' ||
         currentUser.email === 'anhaa@bjtu.edu.cn' ||
         currentUser.email === '25239003@bjtu.edu.cn' ||
@@ -234,6 +246,8 @@ export function initializePortalStorage(): PortalState {
 
 export function resetPortalStorage(): void {
   if (typeof window === 'undefined') return;
+  sessionStorage.removeItem('bjtu_session_active');
+  sessionStorage.removeItem('bjtu_active_view');
   localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(INITIAL_TEACHERS));
   localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
   localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(COURSES));
@@ -276,6 +290,7 @@ export function isUserAdmin(user: UserProfile | null): boolean {
 
 export function loginUser(user: UserProfile): void {
   if (typeof window === 'undefined') return;
+  sessionStorage.setItem('bjtu_session_active', 'true');
   const isAdmin =
     user.role === 'admin' ||
     (user as any).is_admin === true ||
@@ -297,6 +312,8 @@ export function loginUser(user: UserProfile): void {
 
 export function logoutUser(): void {
   if (typeof window === 'undefined') return;
+  sessionStorage.removeItem('bjtu_session_active');
+  sessionStorage.removeItem('bjtu_active_view');
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   localStorage.removeItem('bjtu_admin_session');
   localStorage.removeItem('bjtu_admin_user_id');

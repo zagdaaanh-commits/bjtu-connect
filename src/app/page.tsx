@@ -28,10 +28,10 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
 
   // Navigation flow:
-  // Step 1: Login page (when !currentUser)
+  // Step 1: Login page (activeView === 'login' || !currentUser)
   // Step 2: Portal Home (activeView === 'landing')
   // Step 3: Workspace (activeView === 'workspace')
-  const [activeView, setActiveView] = useState<'landing' | 'workspace'>('landing');
+  const [activeView, setActiveView] = useState<'login' | 'landing' | 'workspace'>('login');
 
   const refreshState = useCallback(() => {
     const currentState = getStoredState();
@@ -40,6 +40,20 @@ export default function HomePage() {
 
   useEffect(() => {
     setMounted(true);
+    const sessionActive =
+      typeof window !== 'undefined' &&
+      sessionStorage.getItem('bjtu_session_active') === 'true';
+    const savedView =
+      typeof window !== 'undefined'
+        ? (sessionStorage.getItem('bjtu_active_view') as 'landing' | 'workspace' | null)
+        : null;
+
+    if (sessionActive && savedView) {
+      setActiveView(savedView);
+    } else {
+      setActiveView('login');
+    }
+
     refreshState();
 
     // Hydrate latest data from Supabase in background
@@ -52,6 +66,14 @@ export default function HomePage() {
     // Subscribe to cross-tab & Supabase realtime events
     const unsubscribe = subscribeToPortalEvents((event) => {
       refreshState();
+
+      if (event.type === 'USER_LOGGED_OUT') {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('bjtu_session_active');
+          sessionStorage.removeItem('bjtu_active_view');
+        }
+        setActiveView('login');
+      }
 
       if (event.type === 'NEW_MESSAGE') {
         const stored = getStoredState();
@@ -91,25 +113,43 @@ export default function HomePage() {
   const { currentUser, students, teachers, courses, conversations, messages } = state;
 
   const handleLoginSuccess = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('bjtu_session_active', 'true');
+      sessionStorage.setItem('bjtu_active_view', 'landing');
+    }
     refreshState();
     // Sequential step: Login -> Portal Home
     setActiveView('landing');
   };
 
   const handleGoToWorkspace = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('bjtu_active_view', 'workspace');
+    }
     // Sequential step: Portal Home -> Workspace
     setActiveView('workspace');
   };
 
-  const handleLogout = () => {
-    // 1-click instant logout directly back to Login page
-    logoutUser();
-    refreshState();
+  const handleGoToLanding = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('bjtu_active_view', 'landing');
+    }
     setActiveView('landing');
   };
 
-  // STEP 1: If not logged in, render Login Page (CAS Unified Auth)
-  if (!currentUser) {
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('bjtu_session_active');
+      sessionStorage.removeItem('bjtu_active_view');
+    }
+    // 1-click instant logout directly back to Login page
+    logoutUser();
+    refreshState();
+    setActiveView('login');
+  };
+
+  // STEP 1: If not logged in or active view is login, render Login Page (CAS Unified Auth)
+  if (activeView === 'login' || !currentUser) {
     return (
       <AuthPortal
         initialRole="student"
@@ -130,7 +170,7 @@ export default function HomePage() {
           onRefresh={refreshState}
           isMuted={isMuted}
           onToggleMute={() => setIsMuted(!isMuted)}
-          onGoToLanding={() => setActiveView('landing')}
+          onGoToLanding={handleGoToLanding}
         />
 
         {/* Main Content Area */}
@@ -179,7 +219,7 @@ export default function HomePage() {
             <div className="flex items-center gap-4 text-[11px] text-slate-400">
               <button
                 type="button"
-                onClick={() => setActiveView('landing')}
+                onClick={handleGoToLanding}
                 className="text-emerald-700 hover:underline font-medium cursor-pointer"
               >
                 {language === 'zh' ? '← 返回门户主页' : '← Back to Portal Home'}
@@ -200,7 +240,7 @@ export default function HomePage() {
   return (
     <EditorialLandingPage
       currentUser={currentUser}
-      onOpenAuth={() => {}}
+      onOpenAuth={() => setActiveView('login')}
       onGoToWorkspace={handleGoToWorkspace}
       onLogout={handleLogout}
     />
