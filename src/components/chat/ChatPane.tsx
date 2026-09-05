@@ -81,8 +81,12 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
 
   useEffect(() => {
     scrollToBottom(false);
+    const effectiveRole: 'student' | 'teacher' =
+      currentUser.role === 'teacher' || Boolean((currentUser as any).title)
+        ? 'teacher'
+        : 'student';
     // Mark as read when conversation is opened
-    markConversationRead(conversation.id, currentUser.role);
+    markConversationRead(conversation.id, effectiveRole);
   }, [conversation.id, currentUser.role]);
 
   useEffect(() => {
@@ -91,6 +95,11 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
 
   // Listen to typing status and realtime events
   useEffect(() => {
+    const effectiveRole: 'student' | 'teacher' =
+      currentUser.role === 'teacher' || Boolean((currentUser as any).title)
+        ? 'teacher'
+        : 'student';
+
     const unsubscribe = subscribeToPortalEvents((ev) => {
       if (
         ev.type === 'TYPING_STATUS' &&
@@ -101,7 +110,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
       if (ev.type === 'NEW_MESSAGE' && ev.payload?.conversationId === conversation.id) {
         // Mark conversation as read if sender is counterpart
         if (ev.payload.senderId !== currentUser.id) {
-          markConversationRead(conversation.id, currentUser.role);
+          markConversationRead(conversation.id, effectiveRole);
         }
         onRefresh();
       }
@@ -115,12 +124,17 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
     attachments?: Attachment[];
     bookingProposal?: Message['bookingProposal'];
   }) => {
+    const effectiveRole: 'student' | 'teacher' =
+      currentUser.role === 'teacher' || Boolean((currentUser as any).title)
+        ? 'teacher'
+        : 'student';
+
     sendPortalMessage({
       conversationId: conversation.id,
       senderId: currentUser.id,
-      senderRole: currentUser.role,
+      senderRole: effectiveRole,
       senderName:
-        currentUser.role === 'teacher'
+        effectiveRole === 'teacher'
           ? formatTeacher(currentUser as any)
           : language === 'zh'
           ? (currentUser as StudentProfile).chineseName || currentUser.fullName

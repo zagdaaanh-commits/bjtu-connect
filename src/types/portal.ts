@@ -1,4 +1,4 @@
-export type Role = 'student' | 'teacher';
+export type Role = 'student' | 'teacher' | 'admin';
 
 export type TeacherStatus = 'available' | 'office_hours' | 'in_meeting' | 'offline';
 
@@ -51,7 +51,9 @@ export type FacultyKey =
 
 export interface StudentProfile {
   id: string;
-  role: 'student';
+  role: Role;
+  isAdmin?: boolean;
+  is_admin?: boolean;
   fullName: string;
   chineseName?: string;
   studentId: string; // e.g. "2023010482"
@@ -70,7 +72,9 @@ export interface StudentProfile {
 
 export interface TeacherProfile {
   id: string;
-  role: 'teacher';
+  role: Role;
+  isAdmin?: boolean;
+  is_admin?: boolean;
   fullName: string;
   chineseName?: string;
   staffId?: string; // e.g. "T10048"

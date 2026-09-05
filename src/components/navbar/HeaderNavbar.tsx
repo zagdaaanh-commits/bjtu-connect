@@ -12,6 +12,7 @@ import {
   Edit3,
   Check,
   Camera,
+  Shield,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -40,7 +41,31 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const { language, t, formatSchool, formatTeacher } = useLanguage();
-  const isTeacher = currentUser.role === 'teacher';
+
+  const isAdmin =
+    currentUser.role === 'admin' ||
+    (currentUser as any).is_admin === true ||
+    (currentUser as any).is_admin === 'true' ||
+    (currentUser as any).isAdmin === true ||
+    (currentUser as any).isAdmin === 'true' ||
+    (typeof window !== 'undefined' && localStorage.getItem('bjtu_admin_session') === 'true');
+
+  const isTeacher =
+    currentUser.role === 'teacher' ||
+    Boolean((currentUser as any).coursesTaughtIds) ||
+    Boolean((currentUser as any).title);
+
+  const adminUserId =
+    typeof window !== 'undefined' ? localStorage.getItem('bjtu_admin_user_id') : null;
+  const originalAdminUser = adminUserId
+    ? students.find((s) => s.id === adminUserId) || teachers.find((t) => t.id === adminUserId)
+    : null;
+
+  const displayName = isTeacher
+    ? formatTeacher(currentUser as TeacherProfile)
+    : language === 'zh'
+    ? currentUser.chineseName || currentUser.fullName
+    : currentUser.fullName;
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -125,22 +150,31 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             {/* Sign Out / Exit to Login Interface Button */}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors shadow-2xs cursor-pointer"
               title={t('app.signOut')}
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>{t('app.signOut')}</span>
             </button>
 
-            {/* Persona & Role Switcher Dropdown */}
+            {/* Persona & Role Switcher Dropdown (Admin Only Switcher) */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all bg-white shadow-2xs cursor-pointer"
+                title={
+                  isAdmin
+                    ? language === 'zh'
+                      ? '管理员身份中心与身份切换'
+                      : 'Admin Center & Persona Switcher'
+                    : language === 'zh'
+                    ? '个人信息与账户中心'
+                    : 'Personal Profile & Account'
+                }
               >
                 <Avatar
                   src={currentUser.avatar}
-                  name={formatTeacher(currentUser as TeacherProfile)}
+                  name={displayName}
                   size="sm"
                   status={isTeacher ? (currentUser as TeacherProfile).status : undefined}
                 />
@@ -148,17 +182,25 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                 <div className="text-left hidden sm:block">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-slate-900 leading-none">
-                      {formatTeacher(currentUser as TeacherProfile)}
+                      {displayName}
                     </span>
                     <span
                       className={cn(
-                        'px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase tracking-wide',
-                        isTeacher
+                        'px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide',
+                        isAdmin
+                          ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                          : isTeacher
                           ? 'bg-bjtu-100 text-bjtu-900'
                           : 'bg-emerald-100 text-emerald-800'
                       )}
                     >
-                      {isTeacher ? t('app.role.teacher') : t('app.role.student')}
+                      {isAdmin
+                        ? language === 'zh'
+                          ? '系统管理员'
+                          : 'ADMIN'
+                        : isTeacher
+                        ? t('app.role.teacher')
+                        : t('app.role.student')}
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-500 block truncate max-w-[130px] mt-0.5">
@@ -171,7 +213,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
               {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute right-0 mt-2 w-72 sm:w-84 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {/* Profile Header */}
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
@@ -180,11 +223,11 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                           setIsEditModalOpen(true);
                         }}
                         className="relative group cursor-pointer shrink-0"
-                        title="Click to Change Profile Photo (更换头像)"
+                        title={language === 'zh' ? '点击更换头像' : 'Click to Change Profile Photo'}
                       >
                         <Avatar
                           src={currentUser.avatar}
-                          name={currentUser.fullName}
+                          name={displayName}
                           size="md"
                         />
                         <div className="absolute inset-0 bg-slate-900/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white">
@@ -193,11 +236,18 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          {language === 'zh' ? '当前北京交通大学身份' : 'Active BJTU Profile'}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            {language === 'zh' ? '当前北京交通大学身份' : 'Active BJTU Profile'}
+                          </span>
+                          {isAdmin && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-purple-100 text-purple-800 border border-purple-200">
+                              {language === 'zh' ? '管理员' : 'Admin'}
+                            </span>
+                          )}
                         </div>
                         <div className="font-bold text-xs text-slate-900 truncate">
-                          {formatTeacher(currentUser as TeacherProfile)}
+                          {displayName}
                         </div>
                         <button
                           type="button"
@@ -214,77 +264,181 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                     </div>
                   </div>
 
-                  {/* Student Options */}
-                  <div className="px-3 py-1.5">
-                    <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider px-2 py-1 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      {language === 'zh' ? '学生演示账号' : 'Student Personas'}
-                    </div>
-                    {students.map((s) => {
-                      const isSelected = currentUser.id === s.id;
-                      return (
-                        <button
-                          key={s.id}
-                          onClick={() => handleSelectUser(s.id, 'student')}
-                          className={cn(
-                            'w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left',
-                            isSelected
-                              ? 'bg-emerald-50 font-bold text-emerald-900'
-                              : 'hover:bg-slate-100 text-slate-700'
-                          )}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Avatar src={s.avatar} name={language === 'zh' ? s.chineseName || s.fullName : s.fullName} size="xs" />
-                            <div className="truncate">
-                              <div className="font-semibold text-slate-900 truncate">
-                                {language === 'zh' ? s.chineseName || s.fullName : s.fullName}
-                              </div>
-                              <div className="text-[10px] text-slate-400 truncate">
-                                {s.major} • {s.grade.split('(')[0]}
-                              </div>
+                  {/* ADMIN ONLY: Persona Switcher List */}
+                  {isAdmin ? (
+                    <>
+                      {/* If impersonating an account, show return to admin button */}
+                      {originalAdminUser && originalAdminUser.id !== currentUser.id && (
+                        <div className="p-2 bg-purple-50/80 border-b border-purple-100">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSelectUser(
+                                originalAdminUser.id,
+                                originalAdminUser.role === 'teacher' ? 'teacher' : 'student'
+                              )
+                            }
+                            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs bg-purple-700 hover:bg-purple-800 text-white font-semibold shadow-2xs transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <Shield className="w-3.5 h-3.5 text-purple-200" />
+                              <span>{language === 'zh' ? '返回我的管理员账号' : 'Return to Admin Profile'}</span>
                             </div>
-                          </div>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+                            <span className="text-[10px] text-purple-200 font-mono">
+                              {originalAdminUser.fullName}
+                            </span>
+                          </button>
+                        </div>
+                      )}
 
-                  {/* Teacher Options */}
-                  <div className="px-3 py-1.5 border-t border-slate-100">
-                    <div className="text-[10px] font-bold text-bjtu-800 uppercase tracking-wider px-2 py-1 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-bjtu-700" />
-                      {language === 'zh' ? '教师演示账号' : 'Faculty Personas'}
-                    </div>
-                    {teachers.map((t) => {
-                      const isSelected = currentUser.id === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          onClick={() => handleSelectUser(t.id, 'teacher')}
-                          className={cn(
-                            'w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left',
-                            isSelected
-                              ? 'bg-bjtu-50 font-bold text-bjtu-900'
-                              : 'hover:bg-slate-100 text-slate-700'
-                          )}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Avatar src={t.avatar} name={formatTeacher(t)} size="xs" status={t.status} />
-                            <div className="truncate">
-                              <div className="font-semibold text-slate-900 truncate">
-                                {formatTeacher(t)}
-                              </div>
-                              <div className="text-[10px] text-slate-400 truncate">
-                                {t.title} • {formatSchool(t.facultyKey || t.faculty)}
-                              </div>
+                      <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-100">
+                        {/* Student Options */}
+                        <div className="px-3 py-1.5">
+                          <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <span>{language === 'zh' ? '学生演示账号 (管理员切换)' : 'Student Personas (Admin)'}</span>
                             </div>
+                            <span className="text-[9px] text-slate-400 font-normal">({students.length})</span>
                           </div>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-bjtu-700 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+                          {students.map((s) => {
+                            const isSelected = currentUser.id === s.id;
+                            const isStudentAdmin = Boolean(s.isAdmin || s.is_admin || s.role === 'admin');
+                            return (
+                              <button
+                                key={s.id}
+                                onClick={() => handleSelectUser(s.id, 'student')}
+                                className={cn(
+                                  'w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left cursor-pointer',
+                                  isSelected
+                                    ? 'bg-emerald-50 font-bold text-emerald-900'
+                                    : 'hover:bg-slate-100 text-slate-700'
+                                )}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Avatar
+                                    src={s.avatar}
+                                    name={language === 'zh' ? s.chineseName || s.fullName : s.fullName}
+                                    size="xs"
+                                  />
+                                  <div className="truncate">
+                                    <div className="font-semibold text-slate-900 truncate flex items-center gap-1">
+                                      <span>{language === 'zh' ? s.chineseName || s.fullName : s.fullName}</span>
+                                      {isStudentAdmin && (
+                                        <span className="px-1 py-0.2 rounded text-[8px] font-bold uppercase bg-purple-100 text-purple-800">
+                                          Admin
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 truncate">
+                                      {s.major} • {s.grade.split('(')[0]}
+                                    </div>
+                                  </div>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Teacher Options */}
+                        <div className="px-3 py-1.5">
+                          <div className="text-[10px] font-bold text-bjtu-800 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-bjtu-700" />
+                              <span>{language === 'zh' ? '教师演示账号 (管理员切换)' : 'Faculty Personas (Admin)'}</span>
+                            </div>
+                            <span className="text-[9px] text-slate-400 font-normal">({teachers.length})</span>
+                          </div>
+                          {teachers.map((t) => {
+                            const isSelected = currentUser.id === t.id;
+                            const isTeacherAdmin = Boolean(t.isAdmin || t.is_admin || t.role === 'admin');
+                            return (
+                              <button
+                                key={t.id}
+                                onClick={() => handleSelectUser(t.id, 'teacher')}
+                                className={cn(
+                                  'w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left cursor-pointer',
+                                  isSelected
+                                    ? 'bg-bjtu-50 font-bold text-bjtu-900'
+                                    : 'hover:bg-slate-100 text-slate-700'
+                                )}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Avatar
+                                    src={t.avatar}
+                                    name={formatTeacher(t)}
+                                    size="xs"
+                                    status={t.status}
+                                  />
+                                  <div className="truncate">
+                                    <div className="font-semibold text-slate-900 truncate flex items-center gap-1">
+                                      <span>{formatTeacher(t)}</span>
+                                      {isTeacherAdmin && (
+                                        <span className="px-1 py-0.2 rounded text-[8px] font-bold uppercase bg-purple-100 text-purple-800">
+                                          Admin
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 truncate">
+                                      {t.title} • {formatSchool(t.facultyKey || t.faculty)}
+                                    </div>
+                                  </div>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-bjtu-700 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* REGULAR USER DETAILS (Persona Switcher Hidden) */
+                    <div className="px-4 py-3 bg-slate-50/50 space-y-2.5 text-xs">
+                      <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-100">
+                        <span className="text-slate-400 font-medium">
+                          {language === 'zh' ? '校园认证身份' : 'Campus Identity'}
+                        </span>
+                        <span className="font-semibold text-slate-800 font-mono">
+                          {isTeacher
+                            ? (currentUser as TeacherProfile).staffId || 'BJTU-FACULTY'
+                            : (currentUser as StudentProfile).studentId}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-100">
+                        <span className="text-slate-400 font-medium">
+                          {language === 'zh' ? '所属学院' : 'School / Faculty'}
+                        </span>
+                        <span className="font-semibold text-slate-800 truncate max-w-[180px] text-right">
+                          {formatSchool(currentUser.facultyKey || currentUser.faculty)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-100">
+                        <span className="text-slate-400 font-medium">
+                          {isTeacher
+                            ? language === 'zh'
+                              ? '教研部/系所'
+                              : 'Department'
+                            : language === 'zh'
+                            ? '专业/年级'
+                            : 'Major & Grade'}
+                        </span>
+                        <span className="font-semibold text-slate-800 truncate max-w-[180px] text-right">
+                          {isTeacher
+                            ? (currentUser as TeacherProfile).department
+                            : `${(currentUser as StudentProfile).major} • ${(currentUser as StudentProfile).grade.split('(')[0]}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 font-medium">
+                          {language === 'zh' ? '校园电子邮箱' : 'Email'}
+                        </span>
+                        <span className="text-slate-600 font-mono truncate max-w-[180px] text-right">
+                          {currentUser.email}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Profile Edit Action & Logout */}
                   <div className="p-2 border-t border-slate-100 mt-1 space-y-1">
@@ -304,7 +458,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                         setIsDropdownOpen(false);
                         handleLogout();
                       }}
-                      className="w-full flex items-center justify-center gap-2 py-1.5 px-3 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>{t('app.signOut')}</span>

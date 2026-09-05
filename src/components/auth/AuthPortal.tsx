@@ -12,6 +12,7 @@ import {
   registerStudent,
   registerTeacher,
   getStoredState,
+  hydrateFromSupabase,
 } from '../../lib/storage';
 import { FACULTIES } from '../../data/dummyData';
 import { useLanguage } from '../../context/LanguageContext';
@@ -33,6 +34,10 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   const { language, setLanguage, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin');
   const [selectedRole, setSelectedRole] = useState<'student' | 'teacher'>(initialRole);
+
+  useEffect(() => {
+    hydrateFromSupabase();
+  }, []);
 
   // Form inputs
   const [uidInput, setUidInput] = useState(

@@ -41,9 +41,18 @@ export const supabase = createClient(
 // ==========================================
 
 export function rowToStudent(r: any): StudentProfile {
+  const isAdmin = Boolean(
+    r.role === 'admin' ||
+      r.is_admin === true ||
+      r.is_admin === 'true' ||
+      r.isAdmin === true ||
+      r.isAdmin === 'true'
+  );
   return {
     id: r.id,
-    role: 'student',
+    role: isAdmin ? 'admin' : ((r.role as any) || 'student'),
+    isAdmin,
+    is_admin: isAdmin,
     fullName: r.full_name,
     chineseName: r.chinese_name || undefined,
     studentId: r.student_id,
@@ -62,9 +71,11 @@ export function rowToStudent(r: any): StudentProfile {
 }
 
 export function studentToRow(s: StudentProfile): any {
+  const isAdmin = Boolean(s.isAdmin || s.is_admin || s.role === 'admin');
   return {
     id: s.id,
-    role: 'student',
+    role: s.role,
+    is_admin: isAdmin,
     full_name: s.fullName,
     chinese_name: s.chineseName || null,
     student_id: s.studentId,
@@ -83,9 +94,18 @@ export function studentToRow(s: StudentProfile): any {
 }
 
 export function rowToTeacher(r: any): TeacherProfile {
+  const isAdmin = Boolean(
+    r.role === 'admin' ||
+      r.is_admin === true ||
+      r.is_admin === 'true' ||
+      r.isAdmin === true ||
+      r.isAdmin === 'true'
+  );
   return {
     id: r.id,
-    role: 'teacher',
+    role: isAdmin ? 'admin' : ((r.role as any) || 'teacher'),
+    isAdmin,
+    is_admin: isAdmin,
     fullName: r.full_name,
     chineseName: r.chinese_name || undefined,
     staffId: r.staff_id || undefined,
@@ -106,9 +126,11 @@ export function rowToTeacher(r: any): TeacherProfile {
 }
 
 export function teacherToRow(t: TeacherProfile): any {
+  const isAdmin = Boolean(t.isAdmin || t.is_admin || t.role === 'admin');
   return {
     id: t.id,
-    role: 'teacher',
+    role: t.role,
+    is_admin: isAdmin,
     full_name: t.fullName,
     chinese_name: t.chineseName || null,
     staff_id: t.staffId || null,

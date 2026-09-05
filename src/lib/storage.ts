@@ -196,8 +196,40 @@ export function getStoredState(): PortalState {
   return initializePortalStorage();
 }
 
+export function isUserAdmin(user: UserProfile | null): boolean {
+  if (!user) return false;
+  if (
+    user.role === 'admin' ||
+    (user as any).is_admin === true ||
+    (user as any).is_admin === 'true' ||
+    (user as any).isAdmin === true ||
+    (user as any).isAdmin === 'true'
+  ) {
+    return true;
+  }
+  if (typeof window !== 'undefined' && localStorage.getItem('bjtu_admin_session') === 'true') {
+    return true;
+  }
+  return false;
+}
+
 export function loginUser(user: UserProfile): void {
   if (typeof window === 'undefined') return;
+  const isAdmin =
+    user.role === 'admin' ||
+    (user as any).is_admin === true ||
+    (user as any).is_admin === 'true' ||
+    (user as any).isAdmin === true ||
+    (user as any).isAdmin === 'true';
+
+  if (isAdmin) {
+    localStorage.setItem('bjtu_admin_session', 'true');
+    localStorage.setItem('bjtu_admin_user_id', user.id);
+  } else {
+    localStorage.removeItem('bjtu_admin_session');
+    localStorage.removeItem('bjtu_admin_user_id');
+  }
+
   localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
   broadcastEvent({ type: 'USER_SWITCHED', payload: user });
 }
@@ -205,6 +237,8 @@ export function loginUser(user: UserProfile): void {
 export function logoutUser(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  localStorage.removeItem('bjtu_admin_session');
+  localStorage.removeItem('bjtu_admin_user_id');
   broadcastEvent({ type: 'USER_LOGGED_OUT' });
 }
 
@@ -739,6 +773,34 @@ export async function hydrateFromSupabase(): Promise<boolean> {
     }
     if (data.messages && data.messages.length > 0) {
       localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(data.messages));
+    }
+
+    // Keep currentUser up-to-date with fresh Supabase profile data & admin flags
+    const rawCurUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    if (rawCurUser) {
+      try {
+        const curUser = JSON.parse(rawCurUser);
+        const freshUser =
+          data.students?.find((s) => s.id === curUser.id) ||
+          data.teachers?.find((t) => t.id === curUser.id);
+        if (freshUser) {
+          const merged = { ...curUser, ...freshUser };
+          const isAdmin =
+            merged.role === 'admin' ||
+            merged.is_admin === true ||
+            merged.isAdmin === true;
+          if (isAdmin) {
+            merged.role = 'admin';
+            merged.isAdmin = true;
+            merged.is_admin = true;
+            localStorage.setItem('bjtu_admin_session', 'true');
+            localStorage.setItem('bjtu_admin_user_id', merged.id);
+          }
+          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(merged));
+        }
+      } catch (e) {
+        // Silently ignore corrupted session
+      }
     }
 
     broadcastEvent({ type: 'DATA_RESET' });

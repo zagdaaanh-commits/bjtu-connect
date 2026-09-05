@@ -135,7 +135,8 @@ export default function HomePage() {
 
         {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {currentUser.role === 'student' ? (
+          {currentUser.role === 'student' ||
+          (currentUser.role === 'admin' && Boolean((currentUser as any).studentId && !(currentUser as any).title)) ? (
             <StudentWorkspace
               student={currentUser as StudentProfile}
               teachers={teachers}
