@@ -1494,8 +1494,9 @@ ON CONFLICT (id) DO UPDATE SET
   enrolled_course_ids = EXCLUDED.enrolled_course_ids,
   gpa = EXCLUDED.gpa;
 INSERT INTO public.students (id, role, full_name, chinese_name, student_id, faculty, faculty_key, major, grade, class_group, avatar, email, phone, enrolled_course_ids, gpa, password)
-VALUES ('student_4', 'student', 'ZAGDSUREN ANKHBAYAR', '安哈', '25239002', 'School of Software Engineering (软件学院)', 'se', 'Software Engineering', 'Year 2 (Class of 2027)', 'SE-2501', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', '25239002@bjtu.edu.cn', '+86 138-2523-9002', ARRAY['course_cs201','course_ai405']::text[], '3.85 / 4.0', 'bjtu2026')
+VALUES ('student_4', 'admin', 'ZAGDSUREN ANKHBAYAR', '安哈 (Admin)', '25239002', 'School of Software Engineering (软件学院)', 'se', 'Software Engineering & Cloud Computing', 'Year 2 (Class of 2027)', 'SE-2501', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', 'anhaa@bjtu.edu.cn', '+86 138-2523-9002', ARRAY['course_cs201','course_ai405']::text[], '3.98 / 4.0', 'admin')
 ON CONFLICT (id) DO UPDATE SET
+  role = EXCLUDED.role,
   full_name = EXCLUDED.full_name,
   chinese_name = EXCLUDED.chinese_name,
   student_id = EXCLUDED.student_id,

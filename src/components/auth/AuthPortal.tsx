@@ -125,6 +125,36 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     const state = getStoredState();
     const cleanId = uidInput.trim().toLowerCase();
 
+    // Explicit Admin / Anhaa shortcut
+    if (
+      cleanId === 'anhaa' ||
+      cleanId === 'anha' ||
+      cleanId === 'ankhaa' ||
+      cleanId === '25239002' ||
+      cleanId === 'admin' ||
+      cleanId === 'anhaa@bjtu.edu.cn'
+    ) {
+      const adminStudent =
+        state.students.find(
+          (s) =>
+            s.id === 'student_4' ||
+            s.studentId === '25239002' ||
+            s.email.toLowerCase().includes('anhaa')
+        ) || state.students[3];
+
+      if (adminStudent) {
+        const userToLogin = {
+          ...adminStudent,
+          role: 'admin' as const,
+          isAdmin: true,
+          is_admin: true,
+        };
+        loginUser(userToLogin);
+        onLoginSuccess();
+        return;
+      }
+    }
+
     if (selectedRole === 'student') {
       const student = state.students.find(
         (s) =>

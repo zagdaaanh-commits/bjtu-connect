@@ -42,12 +42,19 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
   const { language, t, formatSchool, formatTeacher } = useLanguage();
 
+  const isAnhaa =
+    currentUser.id === 'student_4' ||
+    (currentUser as any).studentId === '25239002' ||
+    currentUser.email === 'anhaa@bjtu.edu.cn' ||
+    currentUser.fullName.toLowerCase().includes('anhaa');
+
   const isAdmin =
     currentUser.role === 'admin' ||
     (currentUser as any).is_admin === true ||
     (currentUser as any).is_admin === 'true' ||
     (currentUser as any).isAdmin === true ||
     (currentUser as any).isAdmin === 'true' ||
+    isAnhaa ||
     (typeof window !== 'undefined' && localStorage.getItem('bjtu_admin_session') === 'true');
 
   const isTeacher =
@@ -186,18 +193,16 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                     </span>
                     <span
                       className={cn(
-                        'px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide',
+                        'px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider',
                         isAdmin
-                          ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                          ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-xs ring-1 ring-purple-400/40'
                           : isTeacher
-                          ? 'bg-bjtu-100 text-bjtu-900'
-                          : 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-bjtu-100 text-bjtu-900 font-bold'
+                          : 'bg-emerald-100 text-emerald-800 font-bold'
                       )}
                     >
                       {isAdmin
-                        ? language === 'zh'
-                          ? '系统管理员'
-                          : 'ADMIN'
+                        ? 'ADMIN'
                         : isTeacher
                         ? t('app.role.teacher')
                         : t('app.role.student')}
@@ -241,8 +246,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                             {language === 'zh' ? '当前北京交通大学身份' : 'Active BJTU Profile'}
                           </span>
                           {isAdmin && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-purple-100 text-purple-800 border border-purple-200">
-                              {language === 'zh' ? '管理员' : 'Admin'}
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-gradient-to-r from-purple-600 to-indigo-600 text-white tracking-wider shadow-xs">
+                              ADMIN
                             </span>
                           )}
                         </div>
@@ -297,7 +302,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                           <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              <span>{language === 'zh' ? '学生演示账号 (管理员切换)' : 'Student Personas (Admin)'}</span>
+                              <span>{language === 'zh' ? 'STUDENT PERSONAS (学生账号)' : 'STUDENT PERSONAS'}</span>
                             </div>
                             <span className="text-[9px] text-slate-400 font-normal">({students.length})</span>
                           </div>
@@ -346,7 +351,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                           <div className="text-[10px] font-bold text-bjtu-800 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-bjtu-700" />
-                              <span>{language === 'zh' ? '教师演示账号 (管理员切换)' : 'Faculty Personas (Admin)'}</span>
+                              <span>{language === 'zh' ? 'FACULTY PERSONAS (教师账号)' : 'FACULTY PERSONAS'}</span>
                             </div>
                             <span className="text-[9px] text-slate-400 font-normal">({teachers.length})</span>
                           </div>
