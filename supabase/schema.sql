@@ -1775,72 +1775,82 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Insert Messages
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_hz_1', 'conv_haoran_zhang', 'student_haoran', 'student', 'Wang Haoran', 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd-b1mcTk4ODLnXjMeQ3s4f3hrEMvobs-2cgcxrBFjiQPoMEjcO5lVTA9_SnyinOU14tkMrqfm1Ci94dkYjmmlsIfTgulYgwm01MdDSoUkp4ce_fNeznqGomCqPjrAViVghKQtebGHAmmy6QmsQqc7J0ud63z9LCZD14Tt94se5ziyMejMnpcGamNxkILx22-aIqY--gTL3bEt-uer3CaaGpygVSQdlHz5Ihf2XXvGEHm_gVEfXVF', 'Professor, I reviewed Theorem 4.2 in the Advanced Rail Transit Control paper—could we discuss the Lyapunov stability condition for discrete-time perturbations?', 1788590264721, 'read', 'Research Guidance', '{}'::text[], NULL)
+VALUES ('msg_hz_1', 'conv_haoran_zhang', 'student_haoran', 'student', 'Wang Haoran', 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd-b1mcTk4ODLnXjMeQ3s4f3hrEMvobs-2cgcxrBFjiQPoMEjcO5lVTA9_SnyinOU14tkMrqfm1Ci94dkYjmmlsIfTgulYgwm01MdDSoUkp4ce_fNeznqGomCqPjrAViVghKQtebGHAmmy6QmsQqc7J0ud63z9LCZD14Tt94se5ziyMejMnpcGamNxkILx22-aIqY--gTL3bEt-uer3CaaGpygVSQdlHz5Ihf2XXvGEHm_gVEfXVF', 'Professor, I reviewed Theorem 4.2 in the Advanced Rail Transit Control paper—could we discuss the Lyapunov stability condition for discrete-time perturbations?', 1788590264721, 'read', 'Research Guidance', '[]'::jsonb, NULL)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_hz_2', 'conv_haoran_zhang', 'teacher_chen_zhang', 'teacher', 'Prof. Chen Zhang', 'https://lh3.googleusercontent.com/aida-public/AB6AXuAQKPrt-I2VNAUYYXmhphKcPo0bf1AA8q7moxA7W08n4dz5VM2wLH9v52LyXhXyeYHCQxJvCvLkvsTXjhDva0ZvRPQ4delQU9Wb9hRI_xYepHEH0sU10cHJQI5y2oqkzPDRvUte74Bi4vDi7pu6IWqR2q010aCkU_nxrKX8rbSytIIKQrYej-aGpUjhIjTO1xHtuN0MdrXS9b5xX_AIvUfOaZDl8sIxfkN4OeFkB2sRM-IvlVbeyLUr', 'Good catch. The Lyapunov function holds provided the slip vector remains within the Euclidean bounded manifold. Take a look at the attached lemma notes before our slot at 15:30.', 1788590744721, 'delivered', 'Research Guidance', ARRAY['[object Object]']::text[], '{"date":"Today","time":"15:30 - 16:15","location":"Siyuan Hall 402 (思源楼402)","status":"accepted","notes":"Review discrete Lyapunov stability lemma notes beforehand."}'::jsonb)
+VALUES ('msg_hz_2', 'conv_haoran_zhang', 'teacher_chen_zhang', 'teacher', 'Prof. Chen Zhang', 'https://lh3.googleusercontent.com/aida-public/AB6AXuAQKPrt-I2VNAUYYXmhphKcPo0bf1AA8q7moxA7W08n4dz5VM2wLH9v52LyXhXyeYHCQxJvCvLkvsTXjhDva0ZvRPQ4delQU9Wb9hRI_xYepHEH0sU10cHJQI5y2oqkzPDRvUte74Bi4vDi7pu6IWqR2q010aCkU_nxrKX8rbSytIIKQrYej-aGpUjhIjTO1xHtuN0MdrXS9b5xX_AIvUfOaZDl8sIxfkN4OeFkB2sRM-IvlVbeyLUr', 'Good catch. The Lyapunov function holds provided the slip vector remains within the Euclidean bounded manifold. Take a look at the attached lemma notes before our slot at 15:30.', 1788590744721, 'delivered', 'Research Guidance', '[{"name":"Research_Draft_v3_LemmaNotes.pdf","url":"#","type":"application/pdf","size":"2.4 MB"}]'::jsonb, '{"date":"Today","time":"15:30 - 16:15","location":"Siyuan Hall 402 (思源楼402)","status":"accepted","notes":"Review discrete Lyapunov stability lemma notes beforehand."}'::jsonb)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_hz_3', 'conv_haoran_zhang', 'student_haoran', 'student', 'Wang Haoran', 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd-b1mcTk4ODLnXjMeQ3s4f3hrEMvobs-2cgcxrBFjiQPoMEjcO5lVTA9_SnyinOU14tkMrqfm1Ci94dkYjmmlsIfTgulYgwm01MdDSoUkp4ce_fNeznqGomCqPjrAViVghKQtebGHAmmy6QmsQqc7J0ud63z9LCZD14Tt94se5ziyMejMnpcGamNxkILx22-aIqY--gTL3bEt-uer3CaaGpygVSQdlHz5Ihf2XXvGEHm_gVEfXVF', 'Thank you Professor. I have annotated Section 3 with the boundary proof.', 1788591104721, 'delivered', 'Research Guidance', '{}'::text[], NULL)
+VALUES ('msg_hz_3', 'conv_haoran_zhang', 'student_haoran', 'student', 'Wang Haoran', 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd-b1mcTk4ODLnXjMeQ3s4f3hrEMvobs-2cgcxrBFjiQPoMEjcO5lVTA9_SnyinOU14tkMrqfm1Ci94dkYjmmlsIfTgulYgwm01MdDSoUkp4ce_fNeznqGomCqPjrAViVghKQtebGHAmmy6QmsQqc7J0ud63z9LCZD14Tt94se5ziyMejMnpcGamNxkILx22-aIqY--gTL3bEt-uer3CaaGpygVSQdlHz5Ihf2XXvGEHm_gVEfXVF', 'Thank you Professor. I have annotated Section 3 with the boundary proof.', 1788591104721, 'delivered', 'Research Guidance', '[]'::jsonb, NULL)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_1_1', 'conv_1', 'student_1', 'student', 'Ming Li', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80', 'Hello Professor Wang! In CS201 Assignment 3 regarding the train scheduling shortest path rebalancing, I noticed that Case 2 triggers rotation overhead under dense network vertices.', 1788584024721, 'read', 'Assignment Question', ARRAY['[object Object]']::text[], NULL)
+VALUES ('msg_1_1', 'conv_1', 'student_1', 'student', 'Ming Li', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80', 'Hello Professor Wang! In CS201 Assignment 3 regarding the train scheduling shortest path rebalancing, I noticed that Case 2 triggers rotation overhead under dense network vertices.', 1788584024721, 'read', 'Assignment Question', '[{"name":"train_scheduling_benchmark.py","url":"#","type":"text/x-python","size":"14.2 KB"}]'::jsonb, NULL)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_1_2', 'conv_1', 'teacher_1', 'teacher', 'Prof. Jian Wang', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', 'Excellent observation, Ming! Let us analyze the Fibonacci Heap priority queue optimization together in my office. Would you like to meet in Siyuan East 402B tomorrow?', 1788585824721, 'read', NULL, '{}'::text[], '{"date":"Tomorrow, Thursday","time":"14:30 - 15:00","location":"Siyuan East Building Room 402B (思源东楼402B)","status":"pending","notes":"Bring your laptop with the Valgrind benchmark script."}'::jsonb)
+VALUES ('msg_1_2', 'conv_1', 'teacher_1', 'teacher', 'Prof. Jian Wang', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', 'Excellent observation, Ming! Let us analyze the Fibonacci Heap priority queue optimization together in my office. Would you like to meet in Siyuan East 402B tomorrow?', 1788585824721, 'read', NULL, '[]'::jsonb, '{"date":"Tomorrow, Thursday","time":"14:30 - 15:00","location":"Siyuan East Building Room 402B (思源东楼402B)","status":"pending","notes":"Bring your laptop with the Valgrind benchmark script."}'::jsonb)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_1_3', 'conv_1', 'student_1', 'student', 'Ming Li', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80', 'I uploaded my updated draft with the time complexity analysis for rail pathfinding. Could you review when you have a moment?', 1788590504721, 'delivered', 'Assignment Question', ARRAY['[object Object]','[object Object]']::text[], NULL)
+VALUES ('msg_1_3', 'conv_1', 'student_1', 'student', 'Ming Li', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80', 'I uploaded my updated draft with the time complexity analysis for rail pathfinding. Could you review when you have a moment?', 1788590504721, 'delivered', 'Assignment Question', '[{"name":"rail_pathfinding_complexity.pdf","url":"#","type":"application/pdf","size":"1.8 MB"},{"name":"benchmark_results.png","url":"#","type":"image/png","size":"420 KB"}]'::jsonb, NULL)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_2_1', 'conv_2', 'student_2', 'student', 'Wei Zhang', 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&auto=format&fit=crop&q=80', 'Prof. Wang, as an economics student cross-enrolled in CS201, I have a quick inquiry regarding memoized dynamic programming for the train timetable scheduling problem.', 1788576824721, 'read', 'Office Hour Request', '{}'::text[], NULL)
+VALUES ('msg_2_1', 'conv_2', 'student_2', 'student', 'Wei Zhang', 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&auto=format&fit=crop&q=80', 'Prof. Wang, as an economics student cross-enrolled in CS201, I have a quick inquiry regarding memoized dynamic programming for the train timetable scheduling problem.', 1788576824721, 'read', 'Office Hour Request', '[]'::jsonb, NULL)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_2_2', 'conv_2', 'teacher_1', 'teacher', 'Prof. Jian Wang', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', 'Sure Wei! You are very welcome to come by Siyuan East 402B this Thursday afternoon at 14:30. We will walk through the state transition formulation.', 1788579224721, 'read', NULL, '{}'::text[], NULL)
+VALUES ('msg_2_2', 'conv_2', 'teacher_1', 'teacher', 'Prof. Jian Wang', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', 'Sure Wei! You are very welcome to come by Siyuan East 402B this Thursday afternoon at 14:30. We will walk through the state transition formulation.', 1788579224721, 'read', NULL, '[]'::jsonb, NULL)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_2_3', 'conv_2', 'student_2', 'student', 'Wei Zhang', 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&auto=format&fit=crop&q=80', 'Thank you Professor Wang! I will come to your Siyuan East 402B office this Thursday at 14:30.', 1788580424721, 'read', 'Office Hour Request', '{}'::text[], NULL)
+VALUES ('msg_2_3', 'conv_2', 'student_2', 'student', 'Wei Zhang', 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&auto=format&fit=crop&q=80', 'Thank you Professor Wang! I will come to your Siyuan East 402B office this Thursday at 14:30.', 1788580424721, 'read', 'Office Hour Request', '[]'::jsonb, NULL)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
 INSERT INTO public.messages (id, conversation_id, sender_id, sender_role, sender_name, sender_avatar, content, timestamp, status, tag, attachments, booking_proposal)
-VALUES ('msg_4_1', 'conv_4', 'student_3', 'student', 'Sisi Chen', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80', 'Dear Prof. Lin, I have uploaded my CV, research statement on autonomous railway regulation, and transcript. Could you write a recommendation letter?', 1788587624721, 'delivered', 'Recommendation Letter', ARRAY['[object Object]','[object Object]']::text[], NULL)
+VALUES ('msg_4_1', 'conv_4', 'student_3', 'student', 'Sisi Chen', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80', 'Dear Prof. Lin, I have uploaded my CV, research statement on autonomous railway regulation, and transcript. Could you write a recommendation letter?', 1788587624721, 'delivered', 'Recommendation Letter', '[{"name":"Sisi_Chen_CV_2026.pdf","url":"#","type":"application/pdf","size":"320 KB"},{"name":"Research_Statement_Autonomous_Railway.pdf","url":"#","type":"application/pdf","size":"1.1 MB"}]'::jsonb, NULL)
 ON CONFLICT (id) DO UPDATE SET
   content = EXCLUDED.content,
   status = EXCLUDED.status,
   timestamp = EXCLUDED.timestamp,
+  attachments = EXCLUDED.attachments,
   booking_proposal = EXCLUDED.booking_proposal;
